@@ -184,3 +184,8 @@ export interface MessageDeleteEvent {
   messageId: string;
   deletedAt: string;
 }
+
+export interface ConversationDeleteEvent {
+  conversationId: string;
+  deletedAt: string;
+}

@@ -1,8 +1,10 @@
 import { Tabs } from 'expo-router';
-import { Platform } from 'react-native';
+import { Platform, View, Text, StyleSheet } from 'react-native';
 import { Home, Package, ShoppingBag, MessageSquare, Heart, Settings } from 'lucide-react-native';
+import { useUnreadCount } from '@/hooks/useUnreadCount';
 
 export default function TabLayout() {
+  const unreadCount = useUnreadCount();
   return (
     <Tabs
       screenOptions={{
@@ -52,7 +54,19 @@ export default function TabLayout() {
         name="messages"
         options={{
           title: 'Messages',
-          tabBarIcon: ({ color }) => <MessageSquare size={28} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <View>
+              <MessageSquare size={28} color={color} />
+              {unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ),
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
       <Tabs.Screen
@@ -78,3 +92,23 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  badge: {
+    position: 'absolute',
+    right: -8,
+    top: -4,
+    backgroundColor: '#e53e3e',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+});

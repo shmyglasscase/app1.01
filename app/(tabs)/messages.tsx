@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { MessageSquare } from 'lucide-react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Conversation } from '@/types/database';
 import { ConversationDetailScreen } from '@/components/ConversationDetailScreen';
+import { SwipeableConversation } from '@/components/SwipeableConversation';
 import { useLocalSearchParams } from 'expo-router';
 
 export default function MessagesScreen() {
@@ -65,44 +67,19 @@ export default function MessagesScreen() {
 
   const renderConversation = ({ item }: { item: Conversation }) => {
     const otherUser = item.user1_id === user?.id ? item.user2 : item.user1;
+    const unreadCount = item.user1_id === user?.id ? item.unread_count_user1 : item.unread_count_user2;
+    const hasUnread = unreadCount > 0;
 
     return (
-      <TouchableOpacity
-        style={styles.conversationCard}
+      <SwipeableConversation
+        conversation={item}
+        otherUser={otherUser}
+        unreadCount={unreadCount}
+        hasUnread={hasUnread}
+        formatTime={formatTime}
         onPress={() => setSelectedConversation(item)}
-      >
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {otherUser?.full_name?.charAt(0)?.toUpperCase() || otherUser?.email?.charAt(0)?.toUpperCase() || '?'}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.conversationContent}>
-          <View style={styles.conversationHeader}>
-            <Text style={styles.conversationName}>
-              {otherUser?.full_name || otherUser?.email || 'Unknown User'}
-            </Text>
-            <Text style={styles.conversationTime}>
-              {formatTime(item.last_message_at)}
-            </Text>
-          </View>
-          {item.listing && (
-            <Text style={styles.itemName} numberOfLines={1}>
-              Re: {item.listing.title}
-            </Text>
-          )}
-          <Text style={styles.lastMessage} numberOfLines={2}>
-            Start a conversation
-          </Text>
-        </View>
-        {item.listing?.photo_url && (
-          <Image
-            source={{ uri: item.listing.photo_url }}
-            style={styles.itemThumbnail}
-          />
-        )}
-      </TouchableOpacity>
+        onDelete={() => loadConversations()}
+      />
     );
   };
 
@@ -119,7 +96,7 @@ export default function MessagesScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Messages</Text>
         <Text style={styles.headerSubtitle}>
@@ -142,7 +119,7 @@ export default function MessagesScreen() {
           </View>
         }
       />
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -171,68 +148,6 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
-  },
-  conversationCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  avatarContainer: {
-    marginRight: 12,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#38a169',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  conversationContent: {
-    flex: 1,
-  },
-  conversationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  conversationName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2d3748',
-  },
-  conversationTime: {
-    fontSize: 12,
-    color: '#a0aec0',
-  },
-  itemName: {
-    fontSize: 14,
-    color: '#38a169',
-    marginBottom: 4,
-  },
-  lastMessage: {
-    fontSize: 14,
-    color: '#718096',
-    lineHeight: 20,
-  },
-  itemThumbnail: {
-    width: 56,
-    height: 56,
-    borderRadius: 8,
-    marginLeft: 12,
   },
   emptyState: {
     alignItems: 'center',

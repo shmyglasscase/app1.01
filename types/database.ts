@@ -94,6 +94,8 @@ export interface Conversation {
   listing_id?: string;
   last_message_at?: string;
   created_at: string;
+  unread_count_user1: number;
+  unread_count_user2: number;
   user1?: Profile;
   user2?: Profile;
   listing?: MarketplaceListing;
