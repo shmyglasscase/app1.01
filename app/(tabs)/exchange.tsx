@@ -22,6 +22,7 @@ export default function ExchangeScreen() {
   const [selectedItem, setSelectedItem] = useState<MarketplaceListing | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [editingItem, setEditingItem] = useState<MarketplaceListing | null>(null);
+  const [viewMode, setViewMode] = useState<'browse' | 'myListings'>('browse');
   const { user } = useAuth();
   const router = useRouter();
 
@@ -40,7 +41,7 @@ export default function ExchangeScreen() {
     if (user) {
       loadMarketplaceItems();
     }
-  }, [user]);
+  }, [user, viewMode]);
 
   useEffect(() => {
     filterItems();
@@ -49,12 +50,19 @@ export default function ExchangeScreen() {
   const loadMarketplaceItems = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('marketplace_listings')
       .select('*')
       .eq('listing_status', 'active')
-      .neq('user_id', user.id)
       .order('created_at', { ascending: false });
+
+    if (viewMode === 'browse') {
+      query = query.neq('user_id', user.id);
+    } else {
+      query = query.eq('user_id', user.id);
+    }
+
+    const { data, error } = await query;
 
     if (data) {
       setItems(data);
@@ -232,10 +240,12 @@ export default function ExchangeScreen() {
   );
 
   const handleItemPress = async (item: MarketplaceListing) => {
-    await supabase
-      .from('marketplace_listings')
-      .update({ view_count: (item.view_count || 0) + 1 })
-      .eq('id', item.id);
+    if (viewMode === 'browse') {
+      await supabase
+        .from('marketplace_listings')
+        .update({ view_count: (item.view_count || 0) + 1 })
+        .eq('id', item.id);
+    }
 
     setSelectedItem(item);
     setShowDetailsModal(true);
@@ -331,13 +341,25 @@ export default function ExchangeScreen() {
             <Text style={styles.imagePlaceholderText}>No Image</Text>
           </View>
         )}
+        {viewMode === 'myListings' && (
+          <View style={styles.myListingBadge}>
+            <Text style={styles.myListingBadgeText}>Your Listing</Text>
+          </View>
+        )}
       </View>
       <View style={styles.cardContent}>
         <View style={styles.categoryTag}>
           <Text style={styles.categoryText}>{item.category}</Text>
         </View>
         <Text style={styles.itemName} numberOfLines={2}>{item.title}</Text>
-        {item.users_name && (
+        {viewMode === 'myListings' && item.view_count !== undefined && (
+          <View style={styles.viewCountRow}>
+            <View style={styles.viewCountBadge}>
+              <Text style={styles.viewCountText}>{item.view_count} views</Text>
+            </View>
+          </View>
+        )}
+        {viewMode === 'browse' && item.users_name && (
           <Text style={styles.itemManufacturer}>{item.users_name}</Text>
         )}
         <View style={styles.cardFooter}>
@@ -381,8 +403,42 @@ export default function ExchangeScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Exchange</Text>
+        <View style={styles.viewModeToggle}>
+          <TouchableOpacity
+            style={[
+              styles.viewModeButton,
+              viewMode === 'browse' && styles.viewModeButtonActive
+            ]}
+            onPress={() => setViewMode('browse')}
+          >
+            <Text
+              style={[
+                styles.viewModeButtonText,
+                viewMode === 'browse' && styles.viewModeButtonTextActive
+              ]}
+            >
+              Browse
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.viewModeButton,
+              viewMode === 'myListings' && styles.viewModeButtonActive
+            ]}
+            onPress={() => setViewMode('myListings')}
+          >
+            <Text
+              style={[
+                styles.viewModeButtonText,
+                viewMode === 'myListings' && styles.viewModeButtonTextActive
+              ]}
+            >
+              My Listings
+            </Text>
+          </TouchableOpacity>
+        </View>
         <Text style={styles.headerSubtitle}>
-          {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'} available
+          {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'} {viewMode === 'browse' ? 'available' : 'listed'}
         </Text>
       </View>
 
@@ -445,9 +501,13 @@ export default function ExchangeScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No items for sale</Text>
+            <Text style={styles.emptyStateText}>
+              {viewMode === 'browse' ? 'No items for sale' : 'No listings yet'}
+            </Text>
             <Text style={styles.emptyStateSubtext}>
-              Check back later for new listings
+              {viewMode === 'browse'
+                ? 'Check back later for new listings'
+                : 'Tap the + button to create your first listing'}
             </Text>
           </View>
         }
@@ -699,7 +759,33 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
     color: '#2d3748',
-    marginBottom: 4,
+    marginBottom: 12,
+  },
+  viewModeToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#f7fafc',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 12,
+  },
+  viewModeButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewModeButtonActive: {
+    backgroundColor: '#38a169',
+  },
+  viewModeButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#718096',
+  },
+  viewModeButtonTextActive: {
+    color: '#fff',
   },
   headerSubtitle: {
     fontSize: 16,
@@ -780,6 +866,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 160,
     backgroundColor: '#f7fafc',
+    position: 'relative',
   },
   image: {
     width: '100%',
@@ -794,6 +881,22 @@ const styles = StyleSheet.create({
   imagePlaceholderText: {
     fontSize: 14,
     color: '#a0aec0',
+  },
+  myListingBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(56, 161, 105, 0.95)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  myListingBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   cardContent: {
     padding: 12,
@@ -821,6 +924,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#718096',
     marginBottom: 8,
+  },
+  viewCountRow: {
+    marginBottom: 8,
+  },
+  viewCountBadge: {
+    backgroundColor: '#f7fafc',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  viewCountText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#718096',
   },
   cardFooter: {
     flexDirection: 'row',
