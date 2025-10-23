@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { View, Text, StyleSheet, FlatList, AppState, AppStateStatus } from 'react-native';
 import { MessageSquare } from 'lucide-react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { supabase } from '@/lib/supabase';
@@ -7,7 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Conversation } from '@/types/database';
 import { ConversationDetailScreen } from '@/components/ConversationDetailScreen';
 import { SwipeableConversation } from '@/components/SwipeableConversation';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 
 export default function MessagesScreen() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -15,8 +16,44 @@ export default function MessagesScreen() {
   const { user } = useAuth();
   const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
 
+  useFocusEffect(
+    useCallback(() => {
+      loadConversations();
+    }, [user])
+  );
+
   useEffect(() => {
-    loadConversations();
+    if (!user) return;
+
+    const channel = supabase
+      .channel('conversations-list-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversations',
+        },
+        () => {
+          loadConversations();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+        },
+        () => {
+          loadConversations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   useEffect(() => {

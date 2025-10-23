@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { AppState, AppStateStatus } from 'react-native';
 
 export function useUnreadCount() {
   const [unreadCount, setUnreadCount] = useState(0);
   const { user } = useAuth();
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -13,6 +15,10 @@ export function useUnreadCount() {
     }
 
     loadUnreadCount();
+
+    pollingIntervalRef.current = setInterval(() => {
+      loadUnreadCount();
+    }, 5000);
 
     const channel = supabase
       .channel('unread-count-changes')
@@ -40,10 +46,31 @@ export function useUnreadCount() {
           loadUnreadCount();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+        },
+        () => {
+          loadUnreadCount();
+        }
+      )
       .subscribe();
 
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
+        loadUnreadCount();
+      }
+    });
+
     return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
       supabase.removeChannel(channel);
+      subscription.remove();
     };
   }, [user]);
 
