@@ -1,0 +1,1 @@
+I have a supabase connection set up. Make sure that when you create tables or anything database related you are using my current database connection to supabase.
