@@ -2,9 +2,12 @@ import { Tabs } from 'expo-router';
 import { Platform, View, Text, StyleSheet } from 'react-native';
 import { Home, Package, ShoppingBag, MessageSquare, Heart, Settings } from 'lucide-react-native';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
+import { useMatchProcessor } from '@/hooks/useMatchProcessor';
 
 export default function TabLayout() {
   const unreadCount = useUnreadCount();
+  useMatchProcessor();
+
   return (
     <Tabs
       screenOptions={{

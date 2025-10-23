@@ -121,10 +121,27 @@ export interface Message {
 export interface UserNotification {
   id: string;
   user_id: string;
-  type: string;
+  type: 'new_message' | 'listing_inquiry' | 'listing_sold' | 'wishlist_match';
   title: string;
   message: string;
   related_id?: string;
   is_read: boolean;
   created_at: string;
+}
+
+export interface WishlistMatch {
+  id: string;
+  wishlist_item_id: string;
+  marketplace_listing_id: string;
+  match_score: number;
+  match_status: 'new' | 'viewed' | 'dismissed' | 'interested';
+  match_details: {
+    name_score: number;
+    category_score: number;
+    manufacturer_score: number;
+    pattern_score: number;
+    description_score: number;
+  };
+  created_at: string;
+  updated_at: string;
 }

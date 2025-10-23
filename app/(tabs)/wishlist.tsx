@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, RefreshControl, Alert, Modal, ScrollView, Share } from 'react-native';
-import { Search, Heart, Plus, X, DollarSign, Tag, Calendar, MapPin, Package, Edit, Trash2, Check, Share2 } from 'lucide-react-native';
+import { Search, Heart, Plus, X, DollarSign, Tag, Calendar, MapPin, Package, Edit, Trash2, Check, Share2, TrendingUp } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { WishlistItem } from '@/types/database';
+import { WishlistItem, MarketplaceListing } from '@/types/database';
 import { EditWishlistItemModal } from '@/components/EditWishlistItemModal';
+import { WishlistMatchesSection } from '@/components/WishlistMatchesSection';
+import { MarketplaceItemDetailsModal } from '@/components/MarketplaceItemDetailsModal';
+import { useWishlistMatchCounts } from '@/hooks/useWishlistMatchCounts';
 
 export default function WishlistScreen() {
   const [items, setItems] = useState<WishlistItem[]>([]);
@@ -17,7 +20,10 @@ export default function WishlistScreen() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [showMarketplaceModal, setShowMarketplaceModal] = useState(false);
+  const [selectedMarketplaceListing, setSelectedMarketplaceListing] = useState<MarketplaceListing | null>(null);
   const { user } = useAuth();
+  const { matchCounts } = useWishlistMatchCounts(items.map(item => item.id));
 
   const [formData, setFormData] = useState({
     item_name: '',
@@ -235,6 +241,7 @@ export default function WishlistScreen() {
 
   const renderItem = ({ item }: { item: WishlistItem }) => {
     const isSelected = selectedItems.has(item.id);
+    const matchCount = matchCounts[item.id] || 0;
 
     return (
       <TouchableOpacity
@@ -255,6 +262,12 @@ export default function WishlistScreen() {
             {item.category && (
               <View style={styles.categoryTag}>
                 <Text style={styles.categoryText}>{item.category}</Text>
+              </View>
+            )}
+            {matchCount > 0 && (
+              <View style={styles.matchBadge}>
+                <TrendingUp size={12} color="#38a169" />
+                <Text style={styles.matchBadgeText}>{matchCount} {matchCount === 1 ? 'match' : 'matches'}</Text>
               </View>
             )}
           </View>
@@ -524,6 +537,16 @@ export default function WishlistScreen() {
                 )}
 
                 <View style={styles.detailsSection}>
+                  <WishlistMatchesSection
+                    wishlistItemId={selectedItem.id}
+                    onMatchPress={(listing) => {
+                      setSelectedMarketplaceListing(listing);
+                      setShowMarketplaceModal(true);
+                    }}
+                  />
+                </View>
+
+                <View style={styles.detailsSection}>
                   <Text style={styles.sectionTitle}>Metadata</Text>
                   <View style={styles.metadataRow}>
                     <Text style={styles.metadataLabel}>Added</Text>
@@ -569,6 +592,15 @@ export default function WishlistScreen() {
         onSave={() => {
           loadItems();
           setSelectedItem(null);
+        }}
+      />
+
+      <MarketplaceItemDetailsModal
+        item={selectedMarketplaceListing}
+        visible={showMarketplaceModal}
+        onClose={() => {
+          setShowMarketplaceModal(false);
+          setSelectedMarketplaceListing(null);
         }}
       />
 
@@ -990,5 +1022,20 @@ const styles = StyleSheet.create({
   checkboxSelected: {
     backgroundColor: '#db2777',
     borderColor: '#db2777',
+  },
+  matchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#d4f4e2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  matchBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#38a169',
   },
 });
