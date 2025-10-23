@@ -122,18 +122,40 @@ export default function CollectionScreen() {
     }
 
     if (searchQuery) {
+      const query = searchQuery.toLowerCase();
       filtered = filtered.filter(item =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.manufacturer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        item.name.toLowerCase().includes(query) ||
+        item.manufacturer?.toLowerCase().includes(query) ||
+        item.description?.toLowerCase().includes(query) ||
+        item.pattern?.toLowerCase().includes(query) ||
+        item.location?.toLowerCase().includes(query) ||
+        item.condition?.toLowerCase().includes(query) ||
+        item.category?.toLowerCase().includes(query) ||
+        item.subcategory?.toLowerCase().includes(query) ||
+        item.year_manufactured?.toString().includes(query) ||
+        item.purchase_price?.toString().includes(query) ||
+        item.current_value?.toString().includes(query) ||
+        item.quantity?.toString().includes(query) ||
+        item.purchase_date?.toLowerCase().includes(query)
       );
     }
 
     if (advancedFilters.searchText) {
+      const query = advancedFilters.searchText.toLowerCase();
       filtered = filtered.filter(item =>
-        item.name.toLowerCase().includes(advancedFilters.searchText.toLowerCase()) ||
-        item.manufacturer?.toLowerCase().includes(advancedFilters.searchText.toLowerCase()) ||
-        item.description?.toLowerCase().includes(advancedFilters.searchText.toLowerCase())
+        item.name.toLowerCase().includes(query) ||
+        item.manufacturer?.toLowerCase().includes(query) ||
+        item.description?.toLowerCase().includes(query) ||
+        item.pattern?.toLowerCase().includes(query) ||
+        item.location?.toLowerCase().includes(query) ||
+        item.condition?.toLowerCase().includes(query) ||
+        item.category?.toLowerCase().includes(query) ||
+        item.subcategory?.toLowerCase().includes(query) ||
+        item.year_manufactured?.toString().includes(query) ||
+        item.purchase_price?.toString().includes(query) ||
+        item.current_value?.toString().includes(query) ||
+        item.quantity?.toString().includes(query) ||
+        item.purchase_date?.toLowerCase().includes(query)
       );
     }
 
