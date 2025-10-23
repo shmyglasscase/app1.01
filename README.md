@@ -36,6 +36,11 @@ A modern, cross-platform mobile application for collectors to catalog, value, an
 npm install
 ```
 
+2. Set up your Supabase project:
+   - Create a new project at [supabase.com](https://supabase.com)
+   - Run the SQL schema from `DATABASE_SETUP.md` in the Supabase SQL Editor
+   - Update `.env` with your Supabase credentials
+
 3. Start the development server:
 ```bash
 npm run dev
