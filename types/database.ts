@@ -96,6 +96,8 @@ export interface Conversation {
   created_at: string;
   unread_count_user1: number;
   unread_count_user2: number;
+  last_message_preview?: string;
+  last_message_sender_id?: string;
   user1?: Profile;
   user2?: Profile;
   listing?: MarketplaceListing;

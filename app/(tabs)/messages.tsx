@@ -111,6 +111,7 @@ export default function MessagesScreen() {
       <SwipeableConversation
         conversation={item}
         otherUser={otherUser}
+        currentUserId={user?.id || ''}
         unreadCount={unreadCount}
         hasUnread={hasUnread}
         formatTime={formatTime}

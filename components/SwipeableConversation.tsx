@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 interface SwipeableConversationProps {
   conversation: Conversation;
   otherUser: any;
+  currentUserId: string;
   unreadCount: number;
   hasUnread: boolean;
   formatTime: (timestamp?: string) => string;
@@ -17,12 +18,23 @@ interface SwipeableConversationProps {
 export function SwipeableConversation({
   conversation,
   otherUser,
+  currentUserId,
   unreadCount,
   hasUnread,
   formatTime,
   onPress,
   onDelete,
 }: SwipeableConversationProps) {
+  const getLastMessagePreview = () => {
+    if (!conversation.last_message_preview) {
+      return 'Start a conversation';
+    }
+
+    const isCurrentUser = conversation.last_message_sender_id === currentUserId;
+    const prefix = isCurrentUser ? 'You: ' : '';
+
+    return prefix + conversation.last_message_preview;
+  };
   const renderRightActions = (progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
     const scale = dragX.interpolate({
       inputRange: [-100, 0],
@@ -132,7 +144,7 @@ export function SwipeableConversation({
             </Text>
           )}
           <Text style={[styles.lastMessage, hasUnread && styles.lastMessageUnread]} numberOfLines={2}>
-            Start a conversation
+            {getLastMessagePreview()}
           </Text>
         </View>
         {conversation.listing?.photo_url && (
