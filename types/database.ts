@@ -145,3 +145,45 @@ export interface WishlistMatch {
   created_at: string;
   updated_at: string;
 }
+
+export interface EbayMarketData {
+  id: string;
+  inventory_item_id: string;
+  ebay_item_id: string;
+  title: string;
+  sold_price: number;
+  sold_date: string;
+  condition?: string;
+  listing_url?: string;
+  image_url?: string;
+  seller_info?: Record<string, unknown>;
+  shipping_cost?: number;
+  created_at: string;
+}
+
+export interface MarketAnalysisCache {
+  id: string;
+  inventory_item_id: string;
+  analysis_data: {
+    average_price?: number;
+    min_price?: number;
+    max_price?: number;
+    sample_size?: number;
+    trending?: 'up' | 'down' | 'stable';
+    listings?: EbayMarketData[];
+  };
+  last_updated: string;
+  expires_at: string;
+  created_at: string;
+}
+
+export interface MarketAnalysisResult {
+  average_price: number;
+  min_price: number;
+  max_price: number;
+  sample_size: number;
+  trending?: 'up' | 'down' | 'stable';
+  listings: EbayMarketData[];
+  cached: boolean;
+  last_updated: string;
+}

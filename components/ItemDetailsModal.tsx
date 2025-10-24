@@ -1,8 +1,9 @@
 import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
-import { X, Star, TrendingUp, Edit, Trash2, Calendar, Package, MapPin, DollarSign, Tag, Layers } from 'lucide-react-native'; 
+import { X, Star, TrendingUp, Edit, Trash2, Calendar, Package, MapPin, DollarSign, Tag, Layers } from 'lucide-react-native';
 import { InventoryItem } from '@/types/database';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { MarketAnalysisSection } from './MarketAnalysisSection';
 
 interface ItemDetailsModalProps {
   item: InventoryItem | null;
@@ -209,6 +210,10 @@ export function ItemDetailsModal({ item, visible, onClose, onEdit, onDelete, onF
                 <Text style={styles.infoValue}>{formatDate(item.purchase_date)}</Text>
               </View>
             )}
+          </View>
+
+          <View style={styles.section}>
+            <MarketAnalysisSection inventoryItemId={item.id} />
           </View>
 
           <View style={styles.section}>
