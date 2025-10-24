@@ -447,7 +447,7 @@ export default function ExchangeScreen() {
           <Search size={20} color="#a0aec0" />
           <TextInput
             style={styles.searchText}
-            placeholder="Search marketplace..."
+            placeholder="Search The Exchange..."
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
