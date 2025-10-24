@@ -3,9 +3,11 @@ import { Platform, View, Text, StyleSheet } from 'react-native';
 import { Home, Package, ShoppingBag, MessageSquare, Heart, Settings } from 'lucide-react-native';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
 import { useMatchProcessor } from '@/hooks/useMatchProcessor';
+import { useWishlistNewMatchesCount } from '@/hooks/useWishlistNewMatchesCount';
 
 export default function TabLayout() {
   const unreadCount = useUnreadCount();
+  const { newMatchesCount } = useWishlistNewMatchesCount();
   useMatchProcessor();
 
   return (
@@ -76,7 +78,19 @@ export default function TabLayout() {
         name="wishlist"
         options={{
           title: 'Wishlist',
-          tabBarIcon: ({ color }) => <Heart size={28} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <View>
+              <Heart size={28} color={color} />
+              {newMatchesCount > 0 && (
+                <View style={styles.wishlistBadge}>
+                  <Text style={styles.badgeText}>
+                    {newMatchesCount > 99 ? '99+' : newMatchesCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ),
+          tabBarBadge: newMatchesCount > 0 ? newMatchesCount : undefined,
         }}
       />
       <Tabs.Screen
@@ -102,6 +116,18 @@ const styles = StyleSheet.create({
     right: -8,
     top: -4,
     backgroundColor: '#e53e3e',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  wishlistBadge: {
+    position: 'absolute',
+    right: -8,
+    top: -4,
+    backgroundColor: '#38a169',
     borderRadius: 10,
     minWidth: 20,
     height: 20,

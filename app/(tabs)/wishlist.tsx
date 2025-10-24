@@ -152,12 +152,18 @@ export default function WishlistScreen() {
     setSelectedItems(new Set([itemId]));
   };
 
-  const handleItemPress = (item: WishlistItem) => {
+  const handleItemPress = async (item: WishlistItem) => {
     if (selectionMode) {
       toggleItemSelection(item.id);
     } else {
       setSelectedItem(item);
       setShowDetailsModal(true);
+
+      await supabase
+        .from('wishlist_matches')
+        .update({ match_status: 'viewed' })
+        .eq('wishlist_item_id', item.id)
+        .eq('match_status', 'new');
     }
   };
 
@@ -245,7 +251,11 @@ export default function WishlistScreen() {
 
     return (
       <TouchableOpacity
-        style={[styles.card, isSelected && styles.cardSelected]}
+        style={[
+          styles.card,
+          isSelected && styles.cardSelected,
+          matchCount > 0 && styles.cardWithMatches,
+        ]}
         onPress={() => handleItemPress(item)}
         onLongPress={() => handleLongPress(item.id)}
       >
@@ -255,6 +265,9 @@ export default function WishlistScreen() {
               {isSelected && <Check size={20} color="#fff" />}
             </View>
           </View>
+        )}
+        {matchCount > 0 && (
+          <View style={styles.newMatchIndicator} />
         )}
         <View style={styles.cardContent}>
         <View style={styles.cardHeader}>
@@ -1037,5 +1050,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#38a169',
+  },
+  cardWithMatches: {
+    borderWidth: 2,
+    borderColor: '#d4f4e2',
+    backgroundColor: '#fafffe',
+  },
+  newMatchIndicator: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 4,
+    height: '100%',
+    backgroundColor: '#38a169',
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
   },
 });
