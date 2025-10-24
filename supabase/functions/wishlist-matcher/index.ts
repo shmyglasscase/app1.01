@@ -212,22 +212,32 @@ Deno.serve(async (req: Request) => {
             );
 
           if (!insertError) {
-            const { data: existingNotification } = await supabase
-              .from('match_notifications')
+            const { data: matchRecord } = await supabase
+              .from('wishlist_matches')
               .select('id')
-              .eq('user_id', item.user_id)
-              .eq('wishlist_match_id', listing.id)
+              .eq('wishlist_item_id', item.id)
+              .eq('marketplace_listing_id', listing.id)
               .maybeSingle();
 
-            if (!existingNotification) {
-              await supabase.from('user_notifications').insert({
-                user_id: item.user_id,
-                type: 'wishlist_match',
-                title: 'New Match Found!',
-                message: `We found a ${score}% match for "${item.item_name}"`,
-                related_id: listing.id,
-                is_read: false,
-              });
+            if (matchRecord) {
+              const { data: existingNotification } = await supabase
+                .from('user_notifications')
+                .select('id')
+                .eq('user_id', item.user_id)
+                .eq('type', 'wishlist_match')
+                .eq('related_id', matchRecord.id)
+                .maybeSingle();
+
+              if (!existingNotification) {
+                await supabase.from('user_notifications').insert({
+                  user_id: item.user_id,
+                  type: 'wishlist_match',
+                  title: 'New Match Found!',
+                  message: `We found a ${score}% match for "${item.item_name}"`,
+                  related_id: matchRecord.id,
+                  is_read: false,
+                });
+              }
             }
 
             matches.push({ wishlistItemId: item.id, score, details });
@@ -269,7 +279,7 @@ Deno.serve(async (req: Request) => {
 
       for (const listing of listings || []) {
         const { score, details } = calculateMatchScore(wishlistItem, listing);
-        
+
         if (score >= 80) {
           const { error: insertError } = await supabase
             .from('wishlist_matches')
@@ -285,6 +295,34 @@ Deno.serve(async (req: Request) => {
             );
 
           if (!insertError) {
+            const { data: matchRecord } = await supabase
+              .from('wishlist_matches')
+              .select('id')
+              .eq('wishlist_item_id', wishlistItem.id)
+              .eq('marketplace_listing_id', listing.id)
+              .maybeSingle();
+
+            if (matchRecord) {
+              const { data: existingNotification } = await supabase
+                .from('user_notifications')
+                .select('id')
+                .eq('user_id', wishlistItem.user_id)
+                .eq('type', 'wishlist_match')
+                .eq('related_id', matchRecord.id)
+                .maybeSingle();
+
+              if (!existingNotification) {
+                await supabase.from('user_notifications').insert({
+                  user_id: wishlistItem.user_id,
+                  type: 'wishlist_match',
+                  title: 'New Match Found!',
+                  message: `We found a ${score}% match for "${wishlistItem.item_name}"`,
+                  related_id: matchRecord.id,
+                  is_read: false,
+                });
+              }
+            }
+
             matches.push({ marketplaceListingId: listing.id, score, details });
           }
         }
