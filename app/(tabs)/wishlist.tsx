@@ -113,32 +113,30 @@ export default function WishlistScreen() {
   };
 
   const handleDeleteItem = async (itemId: string) => {
-    Alert.alert(
-      'Delete Wishlist Item',
-      'Are you sure you want to remove this item from your wishlist?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            const { error } = await supabase
-              .from('wishlist_items')
-              .delete()
-              .eq('id', itemId);
+    if (!confirm('Are you sure you want to remove this item from your wishlist?')) {
+      return;
+    }
 
-            if (!error) {
-              setShowDetailsModal(false);
-              setSelectedItem(null);
-              await loadItems();
-            } else {
-              Alert.alert('Error', 'Failed to delete wishlist item. Please try again.');
-              console.error('Delete error:', error);
-            }
-          },
-        },
-      ]
-    );
+    try {
+      const { error } = await supabase
+        .from('wishlist_items')
+        .delete()
+        .eq('id', itemId)
+        .eq('user_id', user?.id);
+
+      if (error) {
+        console.error('Delete error:', error);
+        alert('Failed to delete wishlist item. Please try again.');
+        return;
+      }
+
+      setShowDetailsModal(false);
+      setSelectedItem(null);
+      await loadItems();
+    } catch (err) {
+      console.error('Delete exception:', err);
+      alert('An error occurred while deleting the item.');
+    }
   };
 
   const formatDate = (dateString?: string) => {
