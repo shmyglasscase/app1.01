@@ -22,6 +22,8 @@ export default function WishlistScreen() {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [showMarketplaceModal, setShowMarketplaceModal] = useState(false);
   const [selectedMarketplaceListing, setSelectedMarketplaceListing] = useState<MarketplaceListing | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const { user } = useAuth();
   const { matchCounts } = useWishlistMatchCounts(items.map(item => item.id));
 
@@ -112,31 +114,41 @@ export default function WishlistScreen() {
     }
   };
 
-  const handleDeleteItem = async (itemId: string) => {
-    if (!confirm('Are you sure you want to remove this item from your wishlist?')) {
-      return;
-    }
+  const handleDeleteItem = (itemId: string) => {
+    setItemToDelete(itemId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteItem = async () => {
+    if (!itemToDelete) return;
 
     try {
       const { error } = await supabase
         .from('wishlist_items')
         .delete()
-        .eq('id', itemId)
+        .eq('id', itemToDelete)
         .eq('user_id', user?.id);
 
       if (error) {
         console.error('Delete error:', error);
-        alert('Failed to delete wishlist item. Please try again.');
+        Alert.alert('Error', 'Failed to delete wishlist item. Please try again.');
         return;
       }
 
+      setShowDeleteConfirm(false);
+      setItemToDelete(null);
       setShowDetailsModal(false);
       setSelectedItem(null);
       await loadItems();
     } catch (err) {
       console.error('Delete exception:', err);
-      alert('An error occurred while deleting the item.');
+      Alert.alert('Error', 'An error occurred while deleting the item.');
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setItemToDelete(null);
   };
 
   const formatDate = (dateString?: string) => {
@@ -619,6 +631,39 @@ export default function WishlistScreen() {
         }}
       />
 
+      <Modal
+        visible={showDeleteConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={cancelDelete}
+      >
+        <View style={styles.deleteConfirmOverlay}>
+          <View style={styles.deleteConfirmContainer}>
+            <View style={styles.deleteConfirmIcon}>
+              <Trash2 size={32} color="#e53e3e" />
+            </View>
+            <Text style={styles.deleteConfirmTitle}>Remove from Wishlist?</Text>
+            <Text style={styles.deleteConfirmMessage}>
+              Are you sure you want to remove this item from your wishlist? This action cannot be undone.
+            </Text>
+            <View style={styles.deleteConfirmActions}>
+              <TouchableOpacity
+                style={[styles.deleteConfirmButton, styles.deleteConfirmCancelButton]}
+                onPress={cancelDelete}
+              >
+                <Text style={styles.deleteConfirmCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.deleteConfirmButton, styles.deleteConfirmDeleteButton]}
+                onPress={confirmDeleteItem}
+              >
+                <Text style={styles.deleteConfirmDeleteText}>Remove</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <TouchableOpacity
         style={styles.fab}
         onPress={() => setShowAddModal(true)}
@@ -1067,5 +1112,77 @@ const styles = StyleSheet.create({
     backgroundColor: '#38a169',
     borderTopLeftRadius: 16,
     borderBottomLeftRadius: 16,
+  },
+  deleteConfirmOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  deleteConfirmContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  deleteConfirmIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#fee',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  deleteConfirmTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#2d3748',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  deleteConfirmMessage: {
+    fontSize: 16,
+    color: '#718096',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  deleteConfirmActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  deleteConfirmButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteConfirmCancelButton: {
+    backgroundColor: '#f7fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  deleteConfirmCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4a5568',
+  },
+  deleteConfirmDeleteButton: {
+    backgroundColor: '#e53e3e',
+  },
+  deleteConfirmDeleteText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
