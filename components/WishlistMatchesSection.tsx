@@ -8,7 +8,7 @@ import {
   FlatList,
   Image,
 } from 'react-native';
-import { ChevronRight, TrendingUp, X, Eye } from 'lucide-react-native';
+import { ChevronRight, X, Eye } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { MarketplaceListing } from '@/types/database';
 
@@ -18,6 +18,8 @@ interface WishlistMatch {
   marketplace_listing_id: string;
   match_score: number;
   match_status: string;
+  match_quality?: string;
+  price_status?: string;
   match_details: {
     name_score: number;
     category_score: number;
@@ -81,12 +83,6 @@ export function WishlistMatchesSection({
       .eq('id', matchId);
   };
 
-  const getMatchColor = (score: number) => {
-    if (score >= 95) return '#10b981';
-    if (score >= 90) return '#38a169';
-    if (score >= 85) return '#f59e0b';
-    return '#f97316';
-  };
 
   const renderMatch = ({ item }: { item: WishlistMatch }) => {
     const listing = item.marketplace_listing;
@@ -101,8 +97,21 @@ export function WishlistMatchesSection({
         }}
       >
         <View style={styles.matchHeader}>
-          <View style={styles.matchScoreContainer}>
-            <TrendingUp size={16} color={getMatchColor(item.match_score)} />
+          <View style={styles.badgesContainer}>
+            {item.match_quality && (
+              <View style={styles.qualityBadge}>
+                <Text style={styles.qualityBadgeText}>
+                  {item.match_quality.charAt(0).toUpperCase() + item.match_quality.slice(1)}
+                </Text>
+              </View>
+            )}
+            {item.price_status && (
+              <View style={styles.priceBadge}>
+                <Text style={styles.priceBadgeText}>
+                  {item.price_status.charAt(0).toUpperCase() + item.price_status.slice(1)}
+                </Text>
+              </View>
+            )}
           </View>
           <TouchableOpacity
             onPress={() => handleDismissMatch(item.id)}
@@ -151,7 +160,7 @@ export function WishlistMatchesSection({
           <Text style={styles.title}>Potential Matches</Text>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#db2777" />
+          <ActivityIndicator size="small" color="#38a169" />
         </View>
       </View>
     );
@@ -181,7 +190,6 @@ export function WishlistMatchesSection({
         onPress={() => setExpanded(!expanded)}
       >
         <View style={styles.headerLeft}>
-          <TrendingUp size={20} color="#db2777" />
           <Text style={styles.title}>Potential Matches</Text>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{matches.length}</Text>
@@ -234,7 +242,7 @@ const styles = StyleSheet.create({
     color: '#2d3748',
   },
   badge: {
-    backgroundColor: '#fce7f3',
+    backgroundColor: '#d4f4e2',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -242,11 +250,40 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#db2777',
+    color: '#38a169',
   },
   loadingContainer: {
     padding: 24,
     alignItems: 'center',
+  },
+  badgesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  qualityBadge: {
+    backgroundColor: '#d4f4e2',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  qualityBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#38a169',
+  },
+  priceBadge: {
+    backgroundColor: '#d4f4e2',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  priceBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#38a169',
   },
   emptyState: {
     padding: 32,
@@ -279,19 +316,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
-  },
-  matchScoreContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#fff',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  matchScore: {
-    fontSize: 14,
-    fontWeight: '700',
   },
   dismissButton: {
     padding: 4,
@@ -330,7 +354,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#db2777',
+    backgroundColor: '#38a169',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
