@@ -103,14 +103,6 @@ export function WishlistMatchesSection({
         <View style={styles.matchHeader}>
           <View style={styles.matchScoreContainer}>
             <TrendingUp size={16} color={getMatchColor(item.match_score)} />
-            <Text
-              style={[
-                styles.matchScore,
-                { color: getMatchColor(item.match_score) },
-              ]}
-            >
-              {item.match_score}%
-            </Text>
           </View>
           <TouchableOpacity
             onPress={() => handleDismissMatch(item.id)}
