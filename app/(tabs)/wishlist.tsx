@@ -129,7 +129,11 @@ export default function WishlistScreen() {
 
             if (!error) {
               setShowDetailsModal(false);
-              loadItems();
+              setSelectedItem(null);
+              await loadItems();
+            } else {
+              Alert.alert('Error', 'Failed to delete wishlist item. Please try again.');
+              console.error('Delete error:', error);
             }
           },
         },
