@@ -604,11 +604,6 @@ export default function ExchangeScreen() {
                   >
                     {item.category_display}
                   </Text>
-                  {item.listing_count !== undefined && item.listing_count > 0 && (
-                    <View style={styles.filterChipBadge}>
-                      <Text style={styles.filterChipBadgeText}>{item.listing_count}</Text>
-                    </View>
-                  )}
                 </TouchableOpacity>
               )}
             />
