@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { User, Bell, Palette, HelpCircle, Shield, LogOut, ChevronRight, FileText } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
@@ -20,23 +20,34 @@ export default function SettingsScreen() {
   const [helpModalVisible, setHelpModalVisible] = useState(false);
   const [termsModalVisible, setTermsModalVisible] = useState(false);
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
+  const [signOutConfirmVisible, setSignOutConfirmVisible] = useState(false);
 
-  const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            await signOut();
-            router.replace('/(auth)/login');
+  const handleSignOut = async () => {
+    if (Platform.OS === 'web') {
+      setSignOutConfirmVisible(true);
+    } else {
+      Alert.alert(
+        'Sign Out',
+        'Are you sure you want to sign out?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Sign Out',
+            style: 'destructive',
+            onPress: performSignOut,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
+  };
+
+  const performSignOut = async () => {
+    try {
+      await signOut();
+      router.replace('/(auth)/login');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
   };
 
   const SettingItem = ({ icon, title, subtitle, onPress }: any) => (
@@ -162,6 +173,32 @@ export default function SettingsScreen() {
         title="Privacy Policy"
         content={PRIVACY_POLICY}
       />
+
+      {signOutConfirmVisible && Platform.OS === 'web' && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModal}>
+            <Text style={styles.confirmTitle}>Sign Out</Text>
+            <Text style={styles.confirmMessage}>Are you sure you want to sign out?</Text>
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity
+                style={styles.confirmCancelButton}
+                onPress={() => setSignOutConfirmVisible(false)}
+              >
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmSignOutButton}
+                onPress={() => {
+                  setSignOutConfirmVisible(false);
+                  performSignOut();
+                }}
+              >
+                <Text style={styles.confirmSignOutText}>Sign Out</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -298,5 +335,70 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 14,
     color: '#a0aec0',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  confirmModal: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 5,
+  },
+  confirmTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2d3748',
+    marginBottom: 12,
+  },
+  confirmMessage: {
+    fontSize: 16,
+    color: '#718096',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  confirmButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  confirmCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#f7fafc',
+    alignItems: 'center',
+  },
+  confirmCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2d3748',
+  },
+  confirmSignOutButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#e53e3e',
+    alignItems: 'center',
+  },
+  confirmSignOutText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
