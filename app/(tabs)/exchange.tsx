@@ -17,9 +17,10 @@ export default function ExchangeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
-  const [selectedListingTypes, setSelectedListingTypes] = useState<string[]>([]);
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
+  const [minYear, setMinYear] = useState<string>('');
+  const [maxYear, setMaxYear] = useState<string>('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'views' | 'alpha'>('newest');
   const [showFilters, setShowFilters] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -52,12 +53,13 @@ export default function ExchangeScreen() {
   useEffect(() => {
     if (user) {
       loadMarketplaceItems();
+      loadCollectionItems();
     }
   }, [user, viewMode]);
 
   useEffect(() => {
     filterItems();
-  }, [items, searchQuery, selectedCategories, selectedConditions, selectedListingTypes, minPrice, maxPrice, sortBy]);
+  }, [items, searchQuery, selectedCategories, selectedConditions, minPrice, maxPrice, minYear, maxYear, sortBy]);
 
   const loadMarketplaceItems = async () => {
     if (!user) return;
@@ -113,12 +115,6 @@ export default function ExchangeScreen() {
       );
     }
 
-    if (selectedListingTypes.length > 0) {
-      filtered = filtered.filter(item =>
-        item.listing_type && selectedListingTypes.includes(item.listing_type)
-      );
-    }
-
     if (minPrice && !isNaN(parseFloat(minPrice))) {
       filtered = filtered.filter(item =>
         item.asking_price !== null && item.asking_price !== undefined && item.asking_price >= parseFloat(minPrice)
@@ -129,6 +125,22 @@ export default function ExchangeScreen() {
       filtered = filtered.filter(item =>
         item.asking_price !== null && item.asking_price !== undefined && item.asking_price <= parseFloat(maxPrice)
       );
+    }
+
+    if (minYear && !isNaN(parseInt(minYear))) {
+      filtered = filtered.filter(item => {
+        if (!item.inventory_item_id) return true;
+        const invItem = collectionItems.find(ci => ci.id === item.inventory_item_id);
+        return invItem?.year_manufactured && invItem.year_manufactured >= parseInt(minYear);
+      });
+    }
+
+    if (maxYear && !isNaN(parseInt(maxYear))) {
+      filtered = filtered.filter(item => {
+        if (!item.inventory_item_id) return true;
+        const invItem = collectionItems.find(ci => ci.id === item.inventory_item_id);
+        return invItem?.year_manufactured && invItem.year_manufactured <= parseInt(maxYear);
+      });
     }
 
     if (searchQuery) {
@@ -163,7 +175,6 @@ export default function ExchangeScreen() {
     const filters: SearchFilters = {
       categories: selectedCategories.length > 0 ? selectedCategories : undefined,
       conditions: selectedConditions.length > 0 ? selectedConditions : undefined,
-      listingTypes: selectedListingTypes.length > 0 ? selectedListingTypes : undefined,
       minPrice: minPrice ? parseFloat(minPrice) : undefined,
       maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
       sortBy,
@@ -321,24 +332,17 @@ export default function ExchangeScreen() {
     );
   };
 
-  const toggleListingType = (type: string) => {
-    setSelectedListingTypes(prev =>
-      prev.includes(type)
-        ? prev.filter(t => t !== type)
-        : [...prev, type]
-    );
-  };
-
   const clearAllFilters = () => {
     setSelectedCategories([]);
     setSelectedConditions([]);
-    setSelectedListingTypes([]);
     setMinPrice('');
     setMaxPrice('');
+    setMinYear('');
+    setMaxYear('');
     setSortBy('newest');
   };
 
-  const activeFilterCount = selectedCategories.length + selectedConditions.length + selectedListingTypes.length + (minPrice ? 1 : 0) + (maxPrice ? 1 : 0);
+  const activeFilterCount = selectedCategories.length + selectedConditions.length + (minPrice ? 1 : 0) + (maxPrice ? 1 : 0) + (minYear ? 1 : 0) + (maxYear ? 1 : 0);
 
   const filteredCollectionItems = collectionItems.filter(item =>
     item.name.toLowerCase().includes(collectionSearchQuery.toLowerCase()) ||
@@ -628,7 +632,7 @@ export default function ExchangeScreen() {
           </TouchableOpacity>
 
           {showAdvancedFilters && (
-            <View style={styles.advancedFiltersContainer}>
+            <ScrollView style={styles.advancedFiltersContainer} nestedScrollEnabled={true}>
               <View style={styles.filterSection}>
                 <View style={styles.filterHeader}>
                   <Text style={styles.filterHeaderTitle}>Condition</Text>
@@ -662,38 +666,6 @@ export default function ExchangeScreen() {
               </View>
 
               <View style={styles.filterSection}>
-                <View style={styles.filterHeader}>
-                  <Text style={styles.filterHeaderTitle}>Listing Type</Text>
-                  {selectedListingTypes.length > 0 && (
-                    <TouchableOpacity onPress={() => setSelectedListingTypes([])}>
-                      <Text style={styles.clearFilterText}>Clear</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-                <View style={styles.filterChipGrid}>
-                  {availableListingTypes.map((type) => (
-                    <TouchableOpacity
-                      key={type}
-                      style={[
-                        styles.filterChipSmall,
-                        selectedListingTypes.includes(type) && styles.filterChipActive
-                      ]}
-                      onPress={() => toggleListingType(type)}
-                    >
-                      <Text
-                        style={[
-                          styles.filterChipText,
-                          selectedListingTypes.includes(type) && styles.filterChipTextActive
-                        ]}
-                      >
-                        {type === 'sale' ? 'For Sale' : 'For Trade'}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.filterSection}>
                 <Text style={styles.filterHeaderTitle}>Price Range</Text>
                 <View style={styles.priceRangeRow}>
                   <View style={styles.priceInput}>
@@ -715,6 +687,33 @@ export default function ExchangeScreen() {
                       keyboardType="decimal-pad"
                       value={maxPrice}
                       onChangeText={setMaxPrice}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.filterSection}>
+                <Text style={styles.filterHeaderTitle}>Year Manufactured</Text>
+                <View style={styles.priceRangeRow}>
+                  <View style={styles.priceInput}>
+                    <Text style={styles.priceLabel}>From</Text>
+                    <TextInput
+                      style={styles.priceTextInput}
+                      placeholder="1900"
+                      keyboardType="number-pad"
+                      value={minYear}
+                      onChangeText={setMinYear}
+                    />
+                  </View>
+                  <Text style={styles.priceRangeSeparator}>-</Text>
+                  <View style={styles.priceInput}>
+                    <Text style={styles.priceLabel}>To</Text>
+                    <TextInput
+                      style={styles.priceTextInput}
+                      placeholder="2024"
+                      keyboardType="number-pad"
+                      value={maxYear}
+                      onChangeText={setMaxYear}
                     />
                   </View>
                 </View>
@@ -760,7 +759,7 @@ export default function ExchangeScreen() {
                   <Text style={styles.clearAllButtonText}>Clear All Filters</Text>
                 </TouchableOpacity>
               )}
-            </View>
+            </ScrollView>
           )}
 
           {activeFilterCount > 0 && (
@@ -1198,6 +1197,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
+    maxHeight: 400,
   },
   filterSection: {
     marginBottom: 20,
