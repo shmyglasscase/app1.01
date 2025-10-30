@@ -15,7 +15,7 @@ import {
 import { ArrowLeft, Send, Package, Pencil, Trash2, MoreVertical } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Conversation, Message } from '@/types/database';
+import { Conversation, Message, MarketplaceListing } from '@/types/database';
 import {
   getConversationChannel,
   getTypingChannel,
@@ -26,6 +26,7 @@ import {
   MessageDeleteEvent,
 } from '@/lib/ably';
 import type { Types } from 'ably';
+import { MarketplaceItemDetailsModal } from '@/components/MarketplaceItemDetailsModal';
 
 interface ConversationDetailScreenProps {
   conversation: Conversation;
@@ -40,6 +41,7 @@ export function ConversationDetailScreen({ conversation, onBack }: ConversationD
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [showItemDetails, setShowItemDetails] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const conversationChannelRef = useRef<Types.RealtimeChannelCallbacks | null>(null);
@@ -352,7 +354,7 @@ export function ConversationDetailScreen({ conversation, onBack }: ConversationD
             </Text>
             {isOwnMessage && !isDeleted && (
               <Text style={styles.readReceipt}>
-                {item.is_read ? '✓✓' : '✓'}
+                {item.is_read ? 'Read' : 'Sent'}
               </Text>
             )}
           </View>
@@ -416,7 +418,11 @@ export function ConversationDetailScreen({ conversation, onBack }: ConversationD
       </View>
 
       {conversation.listing && (
-        <View style={styles.listingCard}>
+        <TouchableOpacity
+          style={styles.listingCard}
+          onPress={() => setShowItemDetails(true)}
+          activeOpacity={0.7}
+        >
           <View style={styles.listingImageContainer}>
             {conversation.listing.photo_url ? (
               <Image
@@ -442,7 +448,7 @@ export function ConversationDetailScreen({ conversation, onBack }: ConversationD
               <Text style={styles.listingCondition}>{conversation.listing.condition}</Text>
             )}
           </View>
-        </View>
+        </TouchableOpacity>
       )}
 
       <FlatList
@@ -501,6 +507,12 @@ export function ConversationDetailScreen({ conversation, onBack }: ConversationD
           <Send size={20} color={messageText.trim() ? '#fff' : '#cbd5e0'} />
         </TouchableOpacity>
       </View>
+
+      <MarketplaceItemDetailsModal
+        item={conversation.listing || null}
+        visible={showItemDetails}
+        onClose={() => setShowItemDetails(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
