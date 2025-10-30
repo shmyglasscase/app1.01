@@ -74,7 +74,7 @@ export default function MessagesScreen() {
         *,
         user1:user1_id(id, full_name, email),
         user2:user2_id(id, full_name, email),
-        listing:listing_id(id, title, photo_url)
+        listing:listing_id(id, title, photo_url, users_name)
       `)
       .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
       .order('last_message_at', { ascending: false });

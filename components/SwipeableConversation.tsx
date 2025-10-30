@@ -25,6 +25,15 @@ export function SwipeableConversation({
   onPress,
   onDelete,
 }: SwipeableConversationProps) {
+  const getDisplayName = () => {
+    return conversation.listing?.users_name || otherUser?.full_name || otherUser?.email || 'Unknown User';
+  };
+
+  const getDisplayInitial = () => {
+    const name = getDisplayName();
+    return name.charAt(0)?.toUpperCase() || '?';
+  };
+
   const getLastMessagePreview = () => {
     if (!conversation.last_message_preview) {
       return 'Start a conversation';
@@ -116,14 +125,14 @@ export function SwipeableConversation({
         <View style={styles.avatarContainer}>
           <View style={[styles.avatar, hasUnread && styles.avatarUnread]}>
             <Text style={styles.avatarText}>
-              {otherUser?.full_name?.charAt(0)?.toUpperCase() || otherUser?.email?.charAt(0)?.toUpperCase() || '?'}
+              {getDisplayInitial()}
             </Text>
           </View>
         </View>
         <View style={styles.conversationContent}>
           <View style={styles.conversationHeader}>
             <Text style={[styles.conversationName, hasUnread && styles.conversationNameUnread]}>
-              {otherUser?.full_name || otherUser?.email || 'Unknown User'}
+              {getDisplayName()}
             </Text>
             <View style={styles.timeAndBadgeContainer}>
               <Text style={[styles.conversationTime, hasUnread && styles.conversationTimeUnread]}>

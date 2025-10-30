@@ -47,6 +47,10 @@ export function ConversationDetailScreen({ conversation, onBack }: ConversationD
 
   const otherUser = conversation.user1_id === user?.id ? conversation.user2 : conversation.user1;
 
+  const getDisplayName = () => {
+    return conversation.listing?.users_name || otherUser?.full_name || otherUser?.email || 'Unknown User';
+  };
+
   useEffect(() => {
     loadMessages();
     setupAblyChannels();
@@ -401,7 +405,7 @@ export function ConversationDetailScreen({ conversation, onBack }: ConversationD
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={styles.headerName}>
-            {otherUser?.full_name || otherUser?.email || 'Unknown User'}
+            {getDisplayName()}
           </Text>
           {conversation.listing && (
             <Text style={styles.headerSubtitle} numberOfLines={1}>
