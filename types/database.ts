@@ -187,3 +187,44 @@ export interface MarketAnalysisResult {
   cached: boolean;
   last_updated: string;
 }
+
+export interface CategoryUsageTracking {
+  id: string;
+  user_id: string;
+  marketplace_listing_id?: string;
+  category_raw: string;
+  category_normalized: string;
+  category_type: 'category' | 'subcategory';
+  created_at: string;
+}
+
+export interface PopularCategory {
+  id: string;
+  category_normalized: string;
+  category_display: string;
+  category_type: 'category' | 'subcategory';
+  unique_user_count: number;
+  total_usage_count: number;
+  is_active: boolean;
+  first_seen_at: string;
+  last_used_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CategoryGroup {
+  id: string;
+  canonical_category_id: string;
+  category_variation: string;
+  similarity_score: number;
+  created_at: string;
+}
+
+export interface UserSearchHistory {
+  id: string;
+  user_id?: string;
+  search_query?: string;
+  filters_applied: Record<string, unknown>;
+  results_count: number;
+  created_at: string;
+}

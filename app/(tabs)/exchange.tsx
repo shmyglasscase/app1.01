@@ -1,19 +1,28 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, RefreshControl, Modal, ScrollView, Alert } from 'react-native';
-import { Search, Filter, Plus, X, Upload, Package, ChevronRight } from 'lucide-react-native';
+import { Search, Filter, Plus, X, Upload, Package, ChevronRight, SlidersHorizontal, ChevronDown } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { MarketplaceListing, InventoryItem } from '@/types/database';
 import { MarketplaceItemDetailsModal } from '@/components/MarketplaceItemDetailsModal';
 import { useRouter } from 'expo-router';
+import { usePopularCategories, useDistinctFilterOptions } from '@/hooks/usePopularCategories';
+import { useSearchHistory, SearchFilters } from '@/hooks/useSearchHistory';
+import { CategoryAutocomplete } from '@/components/CategoryAutocomplete';
 
 export default function ExchangeScreen() {
   const [items, setItems] = useState<MarketplaceListing[]>([]);
   const [filteredItems, setFilteredItems] = useState<MarketplaceListing[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
+  const [selectedListingTypes, setSelectedListingTypes] = useState<string[]>([]);
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'views' | 'alpha'>('newest');
   const [showFilters, setShowFilters] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCollectionPicker, setShowCollectionPicker] = useState(false);
@@ -25,6 +34,9 @@ export default function ExchangeScreen() {
   const [viewMode, setViewMode] = useState<'browse' | 'myListings'>('browse');
   const { user } = useAuth();
   const router = useRouter();
+  const { categories: popularCategories, loading: categoriesLoading } = usePopularCategories({ type: 'category' });
+  const { conditions: availableConditions, listingTypes: availableListingTypes } = useDistinctFilterOptions();
+  const { trackSearch } = useSearchHistory();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -45,7 +57,7 @@ export default function ExchangeScreen() {
 
   useEffect(() => {
     filterItems();
-  }, [items, searchQuery, selectedCategory]);
+  }, [items, searchQuery, selectedCategories, selectedConditions, selectedListingTypes, minPrice, maxPrice, sortBy]);
 
   const loadMarketplaceItems = async () => {
     if (!user) return;
@@ -87,18 +99,79 @@ export default function ExchangeScreen() {
   const filterItems = () => {
     let filtered = items;
 
-    if (selectedCategory !== 'All') {
-      filtered = filtered.filter(item => item.category === selectedCategory);
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter(item =>
+        item.category && selectedCategories.some(cat =>
+          item.category?.toLowerCase().includes(cat.toLowerCase())
+        )
+      );
+    }
+
+    if (selectedConditions.length > 0) {
+      filtered = filtered.filter(item =>
+        item.condition && selectedConditions.includes(item.condition)
+      );
+    }
+
+    if (selectedListingTypes.length > 0) {
+      filtered = filtered.filter(item =>
+        item.listing_type && selectedListingTypes.includes(item.listing_type)
+      );
+    }
+
+    if (minPrice && !isNaN(parseFloat(minPrice))) {
+      filtered = filtered.filter(item =>
+        item.asking_price !== null && item.asking_price !== undefined && item.asking_price >= parseFloat(minPrice)
+      );
+    }
+
+    if (maxPrice && !isNaN(parseFloat(maxPrice))) {
+      filtered = filtered.filter(item =>
+        item.asking_price !== null && item.asking_price !== undefined && item.asking_price <= parseFloat(maxPrice)
+      );
     }
 
     if (searchQuery) {
       filtered = filtered.filter(item =>
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.category?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'price_asc':
+          return (a.asking_price || 0) - (b.asking_price || 0);
+        case 'price_desc':
+          return (b.asking_price || 0) - (a.asking_price || 0);
+        case 'views':
+          return (b.view_count || 0) - (a.view_count || 0);
+        case 'alpha':
+          return a.title.localeCompare(b.title);
+        default:
+          return 0;
+      }
+    });
+
     setFilteredItems(filtered);
+
+    const filters: SearchFilters = {
+      categories: selectedCategories.length > 0 ? selectedCategories : undefined,
+      conditions: selectedConditions.length > 0 ? selectedConditions : undefined,
+      listingTypes: selectedListingTypes.length > 0 ? selectedListingTypes : undefined,
+      minPrice: minPrice ? parseFloat(minPrice) : undefined,
+      maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
+      sortBy,
+    };
+
+    if (Object.keys(filters).some(key => filters[key as keyof SearchFilters] !== undefined) || searchQuery) {
+      trackSearch(searchQuery || null, filters, filtered.length);
+    }
   };
 
   const onRefresh = async () => {
@@ -230,8 +303,42 @@ export default function ExchangeScreen() {
     }
   };
 
-  const categories = ['All', 'Jadeite', 'Pottery', 'Glass', 'Ceramics', 'Other'];
   const conditions = ['Mint', 'Excellent', 'Good', 'Fair', 'Poor'];
+
+  const toggleCategory = (category: string) => {
+    setSelectedCategories(prev =>
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const toggleCondition = (condition: string) => {
+    setSelectedConditions(prev =>
+      prev.includes(condition)
+        ? prev.filter(c => c !== condition)
+        : [...prev, condition]
+    );
+  };
+
+  const toggleListingType = (type: string) => {
+    setSelectedListingTypes(prev =>
+      prev.includes(type)
+        ? prev.filter(t => t !== type)
+        : [...prev, type]
+    );
+  };
+
+  const clearAllFilters = () => {
+    setSelectedCategories([]);
+    setSelectedConditions([]);
+    setSelectedListingTypes([]);
+    setMinPrice('');
+    setMaxPrice('');
+    setSortBy('newest');
+  };
+
+  const activeFilterCount = selectedCategories.length + selectedConditions.length + selectedListingTypes.length + (minPrice ? 1 : 0) + (maxPrice ? 1 : 0);
 
   const filteredCollectionItems = collectionItems.filter(item =>
     item.name.toLowerCase().includes(collectionSearchQuery.toLowerCase()) ||
@@ -462,31 +569,208 @@ export default function ExchangeScreen() {
 
       {showFilters && (
         <View style={styles.filterContainer}>
-          <FlatList
-            horizontal
-            data={categories}
-            keyExtractor={(item) => item}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterList}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.filterChip,
-                  selectedCategory === item && styles.filterChipActive
-                ]}
-                onPress={() => setSelectedCategory(item)}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    selectedCategory === item && styles.filterChipTextActive
-                  ]}
-                >
-                  {item}
-                </Text>
+          <View style={styles.filterHeader}>
+            <Text style={styles.filterHeaderTitle}>Categories</Text>
+            {selectedCategories.length > 0 && (
+              <TouchableOpacity onPress={() => setSelectedCategories([])}>
+                <Text style={styles.clearFilterText}>Clear</Text>
               </TouchableOpacity>
             )}
-          />
+          </View>
+          {popularCategories.length > 0 ? (
+            <FlatList
+              horizontal
+              data={popularCategories}
+              keyExtractor={(item) => item.id}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterList}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.filterChip,
+                    selectedCategories.includes(item.category_display) && styles.filterChipActive
+                  ]}
+                  onPress={() => toggleCategory(item.category_display)}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      selectedCategories.includes(item.category_display) && styles.filterChipTextActive
+                    ]}
+                  >
+                    {item.category_display}
+                  </Text>
+                  {item.listing_count !== undefined && item.listing_count > 0 && (
+                    <View style={styles.filterChipBadge}>
+                      <Text style={styles.filterChipBadgeText}>{item.listing_count}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          ) : (
+            <View style={styles.filterEmptyState}>
+              <Text style={styles.filterEmptyText}>No categories yet. Create listings to see categories here.</Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={styles.advancedFiltersButton}
+            onPress={() => setShowAdvancedFilters(!showAdvancedFilters)}
+          >
+            <SlidersHorizontal size={16} color="#38a169" />
+            <Text style={styles.advancedFiltersText}>Advanced Filters</Text>
+            <ChevronDown
+              size={16}
+              color="#38a169"
+              style={[showAdvancedFilters && { transform: [{ rotate: '180deg' }] }]}
+            />
+          </TouchableOpacity>
+
+          {showAdvancedFilters && (
+            <View style={styles.advancedFiltersContainer}>
+              <View style={styles.filterSection}>
+                <View style={styles.filterHeader}>
+                  <Text style={styles.filterHeaderTitle}>Condition</Text>
+                  {selectedConditions.length > 0 && (
+                    <TouchableOpacity onPress={() => setSelectedConditions([])}>
+                      <Text style={styles.clearFilterText}>Clear</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <View style={styles.filterChipGrid}>
+                  {availableConditions.map((condition) => (
+                    <TouchableOpacity
+                      key={condition}
+                      style={[
+                        styles.filterChipSmall,
+                        selectedConditions.includes(condition) && styles.filterChipActive
+                      ]}
+                      onPress={() => toggleCondition(condition)}
+                    >
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          selectedConditions.includes(condition) && styles.filterChipTextActive
+                        ]}
+                      >
+                        {condition}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.filterSection}>
+                <View style={styles.filterHeader}>
+                  <Text style={styles.filterHeaderTitle}>Listing Type</Text>
+                  {selectedListingTypes.length > 0 && (
+                    <TouchableOpacity onPress={() => setSelectedListingTypes([])}>
+                      <Text style={styles.clearFilterText}>Clear</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <View style={styles.filterChipGrid}>
+                  {availableListingTypes.map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.filterChipSmall,
+                        selectedListingTypes.includes(type) && styles.filterChipActive
+                      ]}
+                      onPress={() => toggleListingType(type)}
+                    >
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          selectedListingTypes.includes(type) && styles.filterChipTextActive
+                        ]}
+                      >
+                        {type === 'sale' ? 'For Sale' : 'For Trade'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.filterSection}>
+                <Text style={styles.filterHeaderTitle}>Price Range</Text>
+                <View style={styles.priceRangeRow}>
+                  <View style={styles.priceInput}>
+                    <Text style={styles.priceLabel}>Min</Text>
+                    <TextInput
+                      style={styles.priceTextInput}
+                      placeholder="$0"
+                      keyboardType="decimal-pad"
+                      value={minPrice}
+                      onChangeText={setMinPrice}
+                    />
+                  </View>
+                  <Text style={styles.priceRangeSeparator}>-</Text>
+                  <View style={styles.priceInput}>
+                    <Text style={styles.priceLabel}>Max</Text>
+                    <TextInput
+                      style={styles.priceTextInput}
+                      placeholder="$999"
+                      keyboardType="decimal-pad"
+                      value={maxPrice}
+                      onChangeText={setMaxPrice}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.filterSection}>
+                <Text style={styles.filterHeaderTitle}>Sort By</Text>
+                <View style={styles.sortOptionsGrid}>
+                  {[
+                    { value: 'newest', label: 'Newest First' },
+                    { value: 'oldest', label: 'Oldest First' },
+                    { value: 'price_asc', label: 'Price: Low to High' },
+                    { value: 'price_desc', label: 'Price: High to Low' },
+                    { value: 'views', label: 'Most Viewed' },
+                    { value: 'alpha', label: 'Alphabetical' },
+                  ].map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.sortOption,
+                        sortBy === option.value && styles.sortOptionActive
+                      ]}
+                      onPress={() => setSortBy(option.value as any)}
+                    >
+                      <Text
+                        style={[
+                          styles.sortOptionText,
+                          sortBy === option.value && styles.sortOptionTextActive
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {activeFilterCount > 0 && (
+                <TouchableOpacity
+                  style={styles.clearAllButton}
+                  onPress={clearAllFilters}
+                >
+                  <Text style={styles.clearAllButtonText}>Clear All Filters</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {activeFilterCount > 0 && (
+            <View style={styles.activeFiltersRow}>
+              <Text style={styles.activeFiltersLabel}>{activeFilterCount} active filter{activeFilterCount !== 1 ? 's' : ''}</Text>
+              <TouchableOpacity onPress={clearAllFilters}>
+                <Text style={styles.clearAllFiltersText}>Clear all</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
 
@@ -561,15 +845,13 @@ export default function ExchangeScreen() {
               />
             </View>
 
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Category</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., Jadeite, Pottery, Glass"
-                value={formData.category}
-                onChangeText={(text) => setFormData({ ...formData, category: text })}
-              />
-            </View>
+            <CategoryAutocomplete
+              value={formData.category}
+              onChangeText={(text) => setFormData({ ...formData, category: text })}
+              placeholder="e.g., Jadeite, Pottery, Glass"
+              type="category"
+              label="Category"
+            />
 
             <View style={styles.formGroup}>
               <Text style={styles.label}>Condition</Text>
@@ -824,20 +1106,47 @@ const styles = StyleSheet.create({
   filterContainer: {
     backgroundColor: '#fff',
     paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  filterHeaderTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2d3748',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  clearFilterText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#38a169',
   },
   filterList: {
     paddingHorizontal: 16,
     gap: 8,
+    marginBottom: 12,
   },
   filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: '#f7fafc',
     marginRight: 8,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
   },
   filterChipActive: {
     backgroundColor: '#38a169',
+    borderColor: '#38a169',
   },
   filterChipText: {
     fontSize: 14,
@@ -846,6 +1155,149 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: '#fff',
+  },
+  filterChipBadge: {
+    marginLeft: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  filterChipBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#2d3748',
+  },
+  filterEmptyState: {
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  filterEmptyText: {
+    fontSize: 14,
+    color: '#a0aec0',
+    textAlign: 'center',
+  },
+  advancedFiltersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 12,
+    backgroundColor: '#d4f4e2',
+    gap: 8,
+  },
+  advancedFiltersText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#38a169',
+  },
+  advancedFiltersContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  filterSection: {
+    marginBottom: 20,
+  },
+  filterChipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  filterChipSmall: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: '#f7fafc',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+  },
+  priceRangeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  priceInput: {
+    flex: 1,
+  },
+  priceLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#718096',
+    marginBottom: 6,
+  },
+  priceTextInput: {
+    backgroundColor: '#f7fafc',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#2d3748',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  priceRangeSeparator: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#a0aec0',
+    paddingTop: 20,
+  },
+  sortOptionsGrid: {
+    gap: 8,
+  },
+  sortOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: '#f7fafc',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+  },
+  sortOptionActive: {
+    backgroundColor: '#e0f2fe',
+    borderColor: '#0284c7',
+  },
+  sortOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#718096',
+    textAlign: 'center',
+  },
+  sortOptionTextActive: {
+    color: '#0284c7',
+  },
+  clearAllButton: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#fee2e2',
+    marginTop: 8,
+  },
+  clearAllButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#dc2626',
+    textAlign: 'center',
+  },
+  activeFiltersRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  activeFiltersLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4a5568',
+  },
+  clearAllFiltersText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#dc2626',
   },
   list: {
     padding: 12,
