@@ -10,8 +10,10 @@ import {
   Image,
   Alert,
   Platform,
+  Animated,
 } from 'react-native';
 import { X, Upload, Trash2 } from 'lucide-react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -147,6 +149,54 @@ export function EditItemModal({ item, visible, onClose, onSave }: EditItemModalP
         setShowConditionDropdown(false);
       }
     }
+  };
+
+  const deleteCustomField = async (fieldId: string, fieldType: string) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('user_custom_fields')
+      .delete()
+      .eq('id', fieldId)
+      .eq('user_id', user.id);
+
+    if (!error) {
+      await loadCustomFields();
+      Alert.alert('Success', 'Field deleted successfully');
+    } else {
+      Alert.alert('Error', 'Failed to delete field');
+    }
+  };
+
+  const renderRightActions = (progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
+    const scale = dragX.interpolate({
+      inputRange: [-80, 0],
+      outputRange: [1, 0],
+      extrapolate: 'clamp',
+    });
+
+    return (
+      <View style={styles.swipeActionsContainer}>
+        <Animated.View style={[styles.deleteAction, { transform: [{ scale }] }]}>
+          <Trash2 size={20} color="#fff" />
+        </Animated.View>
+      </View>
+    );
+  };
+
+  const handleSwipeOpen = (fieldId: string, fieldName: string, fieldType: string) => {
+    Alert.alert(
+      'Delete Field',
+      `Are you sure you want to delete "${fieldName}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteCustomField(fieldId, fieldType),
+        },
+      ]
+    );
   };
 
   const pickImage = async () => {
@@ -295,16 +345,23 @@ export function EditItemModal({ item, visible, onClose, onSave }: EditItemModalP
             <View style={styles.dropdownMenu}>
               <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
                 {categories.map((cat) => (
-                  <TouchableOpacity
+                  <Swipeable
                     key={cat.id}
-                    style={styles.dropdownItem}
-                    onPress={() => {
-                      setCategory(cat.field_name);
-                      setShowCategoryDropdown(false);
-                    }}
+                    renderRightActions={renderRightActions}
+                    onSwipeableOpen={() => handleSwipeOpen(cat.id, cat.field_name, 'category')}
+                    overshootRight={false}
+                    friction={2}
                   >
-                    <Text style={styles.dropdownItemText}>{cat.field_name}</Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setCategory(cat.field_name);
+                        setShowCategoryDropdown(false);
+                      }}
+                    >
+                      <Text style={styles.dropdownItemText}>{cat.field_name}</Text>
+                    </TouchableOpacity>
+                  </Swipeable>
                 ))}
               </ScrollView>
               <View style={styles.addNewSection}>
@@ -343,16 +400,23 @@ export function EditItemModal({ item, visible, onClose, onSave }: EditItemModalP
             <View style={styles.dropdownMenu}>
               <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
                 {subcategories.map((sub) => (
-                  <TouchableOpacity
+                  <Swipeable
                     key={sub.id}
-                    style={styles.dropdownItem}
-                    onPress={() => {
-                      setSubcategory(sub.field_name);
-                      setShowSubcategoryDropdown(false);
-                    }}
+                    renderRightActions={renderRightActions}
+                    onSwipeableOpen={() => handleSwipeOpen(sub.id, sub.field_name, 'subcategory')}
+                    overshootRight={false}
+                    friction={2}
                   >
-                    <Text style={styles.dropdownItemText}>{sub.field_name}</Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setSubcategory(sub.field_name);
+                        setShowSubcategoryDropdown(false);
+                      }}
+                    >
+                      <Text style={styles.dropdownItemText}>{sub.field_name}</Text>
+                    </TouchableOpacity>
+                  </Swipeable>
                 ))}
               </ScrollView>
               <View style={styles.addNewSection}>
@@ -478,16 +542,23 @@ export function EditItemModal({ item, visible, onClose, onSave }: EditItemModalP
             <View style={styles.dropdownMenu}>
               <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
                 {conditions.map((cond) => (
-                  <TouchableOpacity
+                  <Swipeable
                     key={cond.id}
-                    style={styles.dropdownItem}
-                    onPress={() => {
-                      setCondition(cond.field_name);
-                      setShowConditionDropdown(false);
-                    }}
+                    renderRightActions={renderRightActions}
+                    onSwipeableOpen={() => handleSwipeOpen(cond.id, cond.field_name, 'condition')}
+                    overshootRight={false}
+                    friction={2}
                   >
-                    <Text style={styles.dropdownItemText}>{cond.field_name}</Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setCondition(cond.field_name);
+                        setShowConditionDropdown(false);
+                      }}
+                    >
+                      <Text style={styles.dropdownItemText}>{cond.field_name}</Text>
+                    </TouchableOpacity>
+                  </Swipeable>
                 ))}
               </ScrollView>
               <View style={styles.addNewSection}>
@@ -762,5 +833,17 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 40,
+  },
+  swipeActionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  deleteAction: {
+    backgroundColor: '#e53e3e',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    height: '100%',
   },
 });
