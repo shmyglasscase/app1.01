@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, RefreshControl, Alert, Modal, ScrollView, Share } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, RefreshControl, Alert, Modal, ScrollView, Share, Platform } from 'react-native';
 import { Search, Heart, Plus, X, DollarSign, Tag, Calendar, MapPin, Package, Edit, Trash2, Check, Share2, TrendingUp, Upload } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Clipboard from 'expo-clipboard';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { WishlistItem, MarketplaceListing } from '@/types/database';
@@ -244,6 +245,11 @@ export default function WishlistScreen() {
   const handleShareSelected = async () => {
     if (!user) return;
 
+    if (selectedItems.size === 0) {
+      Alert.alert('No Items Selected', 'Please select items to share');
+      return;
+    }
+
     const itemIds = Array.from(selectedItems);
     const { data, error } = await supabase
       .from('shared_collections')
@@ -256,18 +262,61 @@ export default function WishlistScreen() {
       .select()
       .single();
 
-    if (data) {
-      const shareUrl = `${process.env.EXPO_PUBLIC_APP_URL || 'https://site.myglasscase.com'}/shared/${data.share_token}`;
+    if (error) {
+      console.error('Error creating share:', error);
+      Alert.alert('Error', 'Failed to create shareable link');
+      return;
+    }
 
-      try {
-        await Share.share({
-          message: `Check out my wishlist items: ${shareUrl}`, 
-          url: shareUrl,
-        });
-        setSelectedItems(new Set());
-        setSelectionMode(false);
-      } catch (error) {
-        Alert.alert('Error', 'Failed to share items');
+    if (data) {
+      const shareUrl = `https://site.myglasscase.com/shared/${data.share_token}`;
+
+      // Use clipboard for web, native share for mobile
+      if (Platform.OS === 'web') {
+        try {
+          await Clipboard.setStringAsync(shareUrl);
+          Alert.alert(
+            'Link Copied!',
+            `Share link has been copied to clipboard!\n\n${shareUrl}`,
+            [{
+              text: 'OK',
+              onPress: () => {
+                setSelectedItems(new Set());
+                setSelectionMode(false);
+              }
+            }]
+          );
+        } catch (clipboardError) {
+          console.error('Error copying to clipboard:', clipboardError);
+          Alert.alert(
+            'Share Link',
+            shareUrl,
+            [{
+              text: 'OK',
+              onPress: () => {
+                setSelectedItems(new Set());
+                setSelectionMode(false);
+              }
+            }]
+          );
+        }
+      } else {
+        // Mobile: use native share
+        try {
+          const result = await Share.share({
+            message: `Check out my wishlist! I'm sharing ${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''} with you: ${shareUrl}`,
+            title: 'Share Wishlist Items',
+          });
+
+          if (result.action === Share.sharedAction) {
+            Alert.alert('Success', 'Items shared successfully!');
+            setSelectedItems(new Set());
+            setSelectionMode(false);
+          }
+        } catch (shareError) {
+          console.error('Error sharing:', shareError);
+          Alert.alert('Error', 'Failed to share items');
+        }
       }
     }
   };
