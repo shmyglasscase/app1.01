@@ -471,7 +471,7 @@ export default function CollectionScreen() {
               </Text>
               {hasProfitData && (
                 <Text style={[styles.profitText, profit >= 0 ? styles.profitPositive : styles.profitNegative]}>
-                  {profit >= 0 ? '+' : ''}{profit.toFixed(2)}
+                  {`${profit >= 0 ? '+' : ''}${profit.toFixed(2)}`}
                 </Text>
               )}
             </View>

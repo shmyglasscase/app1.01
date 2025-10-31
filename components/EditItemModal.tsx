@@ -68,7 +68,7 @@ export function EditItemModal({ item, visible, onClose, onSave }: EditItemModalP
         setSubcategory(item.subcategory || '');
         setManufacturer(item.manufacturer || '');
         setPattern(item.pattern || '');
-        setYearManufactured(item.year_manufactured || '');
+        setYearManufactured(item.year_manufactured?.toString() || '');
         setPurchasePrice(item.purchase_price?.toString() || '');
         setPurchaseDate(item.purchase_date || '');
         setCurrentValue(item.current_value?.toString() || '');
@@ -187,7 +187,7 @@ export function EditItemModal({ item, visible, onClose, onSave }: EditItemModalP
       subcategory: subcategory.trim() || null,
       manufacturer: manufacturer.trim() || null,
       pattern: pattern.trim() || null,
-      year_manufactured: yearManufactured.trim() || null,
+      year_manufactured: yearManufactured ? parseInt(yearManufactured) : null,
       purchase_price: purchasePrice ? parseFloat(purchasePrice) : null,
       purchase_date: purchaseDate || null,
       current_value: currentValue ? parseFloat(currentValue) : null,
