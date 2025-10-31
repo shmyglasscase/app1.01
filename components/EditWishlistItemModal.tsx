@@ -8,8 +8,10 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Image,
 } from 'react-native';
-import { X } from 'lucide-react-native';
+import { X, Upload, Trash2 } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { WishlistItem } from '@/types/database';
@@ -32,7 +34,7 @@ export function EditWishlistItemModal({ item, visible, onClose, onSave }: EditWi
     pattern: '',
     desired_price_max: '',
     description: '',
-    ebay_search_term: '',
+    photo_url: '',
   });
 
   useEffect(() => {
@@ -44,10 +46,27 @@ export function EditWishlistItemModal({ item, visible, onClose, onSave }: EditWi
         pattern: item.pattern || '',
         desired_price_max: item.desired_price_max?.toString() || '',
         description: item.description || '',
-        ebay_search_term: item.ebay_search_term || '',
+        photo_url: item.photo_url || '',
       });
     }
   }, [item, visible]);
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setFormData({ ...formData, photo_url: result.assets[0].uri });
+    }
+  };
+
+  const removeImage = () => {
+    setFormData({ ...formData, photo_url: '' });
+  };
 
   const handleSave = async () => {
     if (!user || !item) return;
@@ -68,7 +87,7 @@ export function EditWishlistItemModal({ item, visible, onClose, onSave }: EditWi
         pattern: formData.pattern.trim() || null,
         desired_price_max: formData.desired_price_max ? parseFloat(formData.desired_price_max) : null,
         description: formData.description.trim() || null,
-        ebay_search_term: formData.ebay_search_term.trim() || null,
+        photo_url: formData.photo_url || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', item.id);
@@ -155,13 +174,27 @@ export function EditWishlistItemModal({ item, visible, onClose, onSave }: EditWi
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>eBay Search Term</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Keywords for eBay search"
-              value={formData.ebay_search_term}
-              onChangeText={(text) => setFormData({ ...formData, ebay_search_term: text })}
-            />
+            <Text style={styles.label}>Photo</Text>
+            {formData.photo_url ? (
+              <View style={styles.imageContainer}>
+                <Image source={{ uri: formData.photo_url }} style={styles.image} />
+                <View style={styles.imageActions}>
+                  <TouchableOpacity onPress={pickImage} style={styles.imageActionButton}>
+                    <Upload size={20} color="#38a169" />
+                    <Text style={styles.imageActionText}>Change</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={removeImage} style={styles.imageActionButton}>
+                    <Trash2 size={20} color="#e53e3e" />
+                    <Text style={[styles.imageActionText, styles.imageActionTextDanger]}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={pickImage} style={styles.uploadButton}>
+                <Upload size={24} color="#a0aec0" />
+                <Text style={styles.uploadButtonText}>Add Photo</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.formGroup}>
@@ -246,6 +279,53 @@ const styles = StyleSheet.create({
   },
   textArea: {
     height: 100,
+  },
+  imageContainer: {
+    alignItems: 'center',
+  },
+  image: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: '#f7fafc',
+  },
+  imageActions: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 12,
+  },
+  imageActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#f7fafc',
+    gap: 6,
+  },
+  imageActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#38a169',
+  },
+  imageActionTextDanger: {
+    color: '#e53e3e',
+  },
+  uploadButton: {
+    backgroundColor: '#f7fafc',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
+    paddingVertical: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadButtonText: {
+    fontSize: 16,
+    color: '#a0aec0',
+    marginTop: 8,
+    fontWeight: '500',
   },
   bottomSpacing: {
     height: 40,
