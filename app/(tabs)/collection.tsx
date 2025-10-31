@@ -438,26 +438,26 @@ export default function CollectionScreen() {
         <View style={styles.cardContent}>
           <View style={styles.categoryRow}>
             <View style={styles.categoryTag}>
-              <Text style={styles.categoryText}>{item.category}</Text>
+              <Text style={styles.categoryText}>{item.category || 'Uncategorized'}</Text>
             </View>
-            {item.subcategory && (
+            {item.subcategory && item.subcategory.trim() && (
               <View style={styles.subcategoryTag}>
                 <Text style={styles.subcategoryText}>{item.subcategory}</Text>
               </View>
             )}
           </View>
-          <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
-          {item.manufacturer && (
+          <Text style={styles.itemName} numberOfLines={2}>{item.name || 'Unnamed Item'}</Text>
+          {item.manufacturer && item.manufacturer.trim() && (
             <Text style={styles.itemManufacturer} numberOfLines={1}>{item.manufacturer}</Text>
           )}
           <View style={styles.cardMeta}>
-            {item.purchase_date && (
+            {item.purchase_date && formatDate(item.purchase_date) && (
               <View style={styles.metaItem}>
                 <Calendar size={12} color="#a0aec0" />
                 <Text style={styles.metaText}>{formatDate(item.purchase_date)}</Text>
               </View>
             )}
-            {item.location && (
+            {item.location && item.location.trim() && (
               <View style={styles.metaItem}>
                 <MapPin size={12} color="#a0aec0" />
                 <Text style={styles.metaText} numberOfLines={1}>{item.location}</Text>
