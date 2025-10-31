@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, RefreshControl, Alert, Modal, ScrollView, Share } from 'react-native';
-import { Search, Heart, Plus, X, DollarSign, Tag, Calendar, MapPin, Package, Edit, Trash2, Check, Share2, TrendingUp } from 'lucide-react-native';
+import { Search, Heart, Plus, X, DollarSign, Tag, Calendar, MapPin, Package, Edit, Trash2, Check, Share2, TrendingUp, Upload } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { WishlistItem, MarketplaceListing } from '@/types/database';
@@ -34,7 +35,7 @@ export default function WishlistScreen() {
     pattern: '',
     desired_price_max: '',
     description: '',
-    ebay_search_term: '',
+    photo_url: '',
   });
 
   useEffect(() => {
@@ -79,6 +80,23 @@ export default function WishlistScreen() {
     setRefreshing(false);
   };
 
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setFormData({ ...formData, photo_url: result.assets[0].uri });
+    }
+  };
+
+  const removeImage = () => {
+    setFormData({ ...formData, photo_url: '' });
+  };
+
   const handleAddItem = async () => {
     if (!user || !formData.item_name.trim()) {
       Alert.alert('Error', 'Please enter an item name');
@@ -95,7 +113,7 @@ export default function WishlistScreen() {
         pattern: formData.pattern || null,
         desired_price_max: formData.desired_price_max ? parseFloat(formData.desired_price_max) : null,
         description: formData.description || null,
-        ebay_search_term: formData.ebay_search_term || null,
+        photo_url: formData.photo_url || null,
         status: 'active',
       }]);
 
@@ -108,7 +126,7 @@ export default function WishlistScreen() {
         pattern: '',
         desired_price_max: '',
         description: '',
-        ebay_search_term: '',
+        photo_url: '',
       });
       loadItems();
     }
@@ -315,7 +333,7 @@ export default function WishlistScreen() {
         )}
 
         <View style={styles.cardFooter}>
-          {item.desired_price_max !== null && (
+          {item.desired_price_max !== null && item.desired_price_max !== undefined && (
             <View style={styles.priceContainer}>
               <Text style={styles.priceLabel}>Max Price</Text>
               <Text style={styles.priceValue}>${item.desired_price_max.toFixed(2)}</Text>
@@ -465,13 +483,27 @@ export default function WishlistScreen() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>eBay Search Term</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Keywords for eBay search"
-                value={formData.ebay_search_term}
-                onChangeText={(text) => setFormData({ ...formData, ebay_search_term: text })}
-              />
+              <Text style={styles.label}>Photo</Text>
+              {formData.photo_url ? (
+                <View style={styles.imageContainer}>
+                  <Image source={{ uri: formData.photo_url }} style={styles.image} />
+                  <View style={styles.imageActions}>
+                    <TouchableOpacity onPress={pickImage} style={styles.imageActionButton}>
+                      <Upload size={20} color="#38a169" />
+                      <Text style={styles.imageActionText}>Change</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={removeImage} style={styles.imageActionButton}>
+                      <Trash2 size={20} color="#e53e3e" />
+                      <Text style={[styles.imageActionText, styles.imageActionTextDanger]}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity onPress={pickImage} style={styles.uploadButton}>
+                  <Upload size={24} color="#a0aec0" />
+                  <Text style={styles.uploadButtonText}>Add Photo</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             <View style={styles.formGroup}>
@@ -536,22 +568,13 @@ export default function WishlistScreen() {
                   </View>
                 )}
 
-                {selectedItem.desired_price_max !== null && (
+                {selectedItem.desired_price_max !== null && selectedItem.desired_price_max !== undefined && (
                   <View style={styles.detailsSection}>
                     <Text style={styles.sectionTitle}>Target Price</Text>
                     <View style={styles.priceBox}>
                       <DollarSign size={24} color="#38a169" />
                       <Text style={styles.priceBoxValue}>${selectedItem.desired_price_max.toFixed(2)}</Text>
                       <Text style={styles.priceBoxLabel}>or less</Text>
-                    </View>
-                  </View>
-                )}
-
-                {selectedItem.ebay_search_term && (
-                  <View style={styles.detailsSection}>
-                    <Text style={styles.sectionTitle}>eBay Search</Text>
-                    <View style={styles.searchTermBox}>
-                      <Text style={styles.searchTermText}>{selectedItem.ebay_search_term}</Text>
                     </View>
                   </View>
                 )}
@@ -1184,5 +1207,52 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  imageContainer: {
+    alignItems: 'center',
+  },
+  image: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: '#f7fafc',
+  },
+  imageActions: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 12,
+  },
+  imageActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#f7fafc',
+    gap: 6,
+  },
+  imageActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#38a169',
+  },
+  imageActionTextDanger: {
+    color: '#e53e3e',
+  },
+  uploadButton: {
+    backgroundColor: '#f7fafc',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
+    paddingVertical: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadButtonText: {
+    fontSize: 16,
+    color: '#a0aec0',
+    marginTop: 8,
+    fontWeight: '500',
   },
 });
