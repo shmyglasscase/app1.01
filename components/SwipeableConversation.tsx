@@ -3,6 +3,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { Trash2 } from 'lucide-react-native';
 import { Conversation } from '@/types/database';
 import { supabase } from '@/lib/supabase';
+import { useRef } from 'react';
 
 interface SwipeableConversationProps {
   conversation: Conversation;
@@ -25,6 +26,7 @@ export function SwipeableConversation({
   onPress,
   onDelete,
 }: SwipeableConversationProps) {
+  const swipeableRef = useRef<Swipeable>(null);
   const getDisplayName = () => {
     return conversation.listing?.users_name || otherUser?.full_name || otherUser?.email || 'Unknown User';
   };
@@ -44,6 +46,29 @@ export function SwipeableConversation({
 
     return prefix + conversation.last_message_preview;
   };
+  const handleDeletePress = () => {
+    Alert.alert(
+      'Delete Conversation',
+      'Are you sure you want to delete this conversation? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => {
+            swipeableRef.current?.close();
+          }
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            await deleteConversation();
+          },
+        },
+      ]
+    );
+  };
+
   const renderRightActions = (progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
     const scale = dragX.interpolate({
       inputRange: [-100, 0],
@@ -53,29 +78,22 @@ export function SwipeableConversation({
 
     return (
       <View style={styles.swipeActionsContainer}>
-        <Animated.View style={[styles.deleteAction, { transform: [{ scale }] }]}>
-          <Trash2 size={24} color="#fff" />
-        </Animated.View>
+        <TouchableOpacity
+          onPress={handleDeletePress}
+          activeOpacity={0.7}
+          style={styles.deleteActionButton}
+        >
+          <Animated.View style={[styles.deleteAction, { transform: [{ scale }] }]}>
+            <Trash2 size={24} color="#fff" />
+          </Animated.View>
+        </TouchableOpacity>
       </View>
     );
   };
 
   const handleSwipeOpen = (direction: 'left' | 'right') => {
     if (direction === 'right') {
-      Alert.alert(
-        'Delete Conversation',
-        'Are you sure you want to delete this conversation? This action cannot be undone.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: async () => {
-              await deleteConversation();
-            },
-          },
-        ]
-      );
+      handleDeletePress();
     }
   };
 
@@ -111,6 +129,7 @@ export function SwipeableConversation({
 
   return (
     <Swipeable
+      ref={swipeableRef}
       renderRightActions={renderRightActions}
       onSwipeableOpen={handleSwipeOpen}
       overshootRight={false}
@@ -174,11 +193,15 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     marginBottom: 12,
   },
+  deleteActionButton: {
+    width: 80,
+    height: '100%',
+  },
   deleteAction: {
     backgroundColor: '#e53e3e',
     justifyContent: 'center',
     alignItems: 'center',
-    width: 80,
+    width: '100%',
     height: '100%',
     borderTopRightRadius: 16,
     borderBottomRightRadius: 16,
