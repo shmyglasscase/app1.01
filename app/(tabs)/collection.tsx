@@ -262,6 +262,11 @@ export default function CollectionScreen() {
   };
 
   const handleDeleteSelected = async () => {
+    if (selectedItems.size === 0) {
+      Alert.alert('No Items Selected', 'Please select items to delete');
+      return;
+    }
+
     const count = selectedItems.size;
     Alert.alert(
       'Delete Items',
@@ -272,15 +277,26 @@ export default function CollectionScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            const { error } = await supabase
-              .from('inventory_items')
-              .delete()
-              .in('id', Array.from(selectedItems));
+            try {
+              const { error } = await supabase
+                .from('inventory_items')
+                .delete()
+                .in('id', Array.from(selectedItems))
+                .eq('user_id', user?.id);
 
-            if (!error) {
+              if (error) {
+                console.error('Delete error:', error);
+                Alert.alert('Error', 'Failed to delete items. Please try again.');
+                return;
+              }
+
               setSelectedItems(new Set());
               setSelectionMode(false);
-              loadItems();
+              await loadItems();
+              Alert.alert('Success', `${count} ${count === 1 ? 'item' : 'items'} deleted successfully`);
+            } catch (err) {
+              console.error('Delete error:', err);
+              Alert.alert('Error', 'Failed to delete items. Please try again.');
             }
           },
         },
