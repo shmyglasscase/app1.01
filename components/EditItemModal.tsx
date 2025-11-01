@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { X, Upload, Trash2 } from 'lucide-react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -149,33 +150,37 @@ export function EditItemModal({ item, visible, onClose, onSave }: EditItemModalP
     }
   };
 
-  const handleDeleteField = (fieldId: string, fieldName: string, fieldType: string) => {
-    Alert.alert(
-      'Delete Field',
-      `Are you sure you want to delete "${fieldName}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            if (!user) return;
+  const handleDeleteField = async (fieldId: string, fieldName: string) => {
+    if (!user) return;
 
-            const { error } = await supabase
-              .from('user_custom_fields')
-              .delete()
-              .eq('id', fieldId)
-              .eq('user_id', user.id);
+    try {
+      const { error } = await supabase
+        .from('user_custom_fields')
+        .delete()
+        .eq('id', fieldId)
+        .eq('user_id', user.id);
 
-            if (!error) {
-              await loadCustomFields();
-              Alert.alert('Success', 'Field deleted successfully');
-            } else {
-              Alert.alert('Error', 'Failed to delete field');
-            }
-          },
-        },
-      ]
+      if (error) {
+        console.error('Delete error:', error);
+        Alert.alert('Error', 'Failed to delete field');
+        return;
+      }
+
+      await loadCustomFields();
+    } catch (err) {
+      console.error('Delete error:', err);
+      Alert.alert('Error', 'Failed to delete field');
+    }
+  };
+
+  const renderRightActions = () => {
+    return (
+      <View style={styles.swipeDeleteContainer}>
+        <View style={styles.swipeDeleteButton}>
+          <Trash2 size={20} color="#fff" />
+          <Text style={styles.swipeDeleteText}>Delete</Text>
+        </View>
+      </View>
     );
   };
 
@@ -325,7 +330,26 @@ export function EditItemModal({ item, visible, onClose, onSave }: EditItemModalP
             <View style={styles.dropdownMenu}>
               <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
                 {categories.map((cat) => (
-                  <View key={cat.id} style={styles.dropdownItemContainer}>
+                  <Swipeable
+                    key={cat.id}
+                    renderRightActions={renderRightActions}
+                    onSwipeableOpen={() => {
+                      Alert.alert(
+                        'Delete Category',
+                        `Delete "${cat.field_name}"?`,
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Delete',
+                            style: 'destructive',
+                            onPress: () => handleDeleteField(cat.id, cat.field_name),
+                          },
+                        ]
+                      );
+                    }}
+                    overshootRight={false}
+                    friction={2}
+                  >
                     <TouchableOpacity
                       style={styles.dropdownItem}
                       onPress={() => {
@@ -335,13 +359,7 @@ export function EditItemModal({ item, visible, onClose, onSave }: EditItemModalP
                     >
                       <Text style={styles.dropdownItemText}>{cat.field_name}</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => handleDeleteField(cat.id, cat.field_name, 'category')}
-                    >
-                      <Trash2 size={16} color="#e53e3e" />
-                    </TouchableOpacity>
-                  </View>
+                  </Swipeable>
                 ))}
               </ScrollView>
               <View style={styles.addNewSection}>
@@ -380,7 +398,26 @@ export function EditItemModal({ item, visible, onClose, onSave }: EditItemModalP
             <View style={styles.dropdownMenu}>
               <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
                 {subcategories.map((sub) => (
-                  <View key={sub.id} style={styles.dropdownItemContainer}>
+                  <Swipeable
+                    key={sub.id}
+                    renderRightActions={renderRightActions}
+                    onSwipeableOpen={() => {
+                      Alert.alert(
+                        'Delete Subcategory',
+                        `Delete "${sub.field_name}"?`,
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Delete',
+                            style: 'destructive',
+                            onPress: () => handleDeleteField(sub.id, sub.field_name),
+                          },
+                        ]
+                      );
+                    }}
+                    overshootRight={false}
+                    friction={2}
+                  >
                     <TouchableOpacity
                       style={styles.dropdownItem}
                       onPress={() => {
@@ -390,13 +427,7 @@ export function EditItemModal({ item, visible, onClose, onSave }: EditItemModalP
                     >
                       <Text style={styles.dropdownItemText}>{sub.field_name}</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => handleDeleteField(sub.id, sub.field_name, 'subcategory')}
-                    >
-                      <Trash2 size={16} color="#e53e3e" />
-                    </TouchableOpacity>
-                  </View>
+                  </Swipeable>
                 ))}
               </ScrollView>
               <View style={styles.addNewSection}>
@@ -522,7 +553,26 @@ export function EditItemModal({ item, visible, onClose, onSave }: EditItemModalP
             <View style={styles.dropdownMenu}>
               <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
                 {conditions.map((cond) => (
-                  <View key={cond.id} style={styles.dropdownItemContainer}>
+                  <Swipeable
+                    key={cond.id}
+                    renderRightActions={renderRightActions}
+                    onSwipeableOpen={() => {
+                      Alert.alert(
+                        'Delete Condition',
+                        `Delete "${cond.field_name}"?`,
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Delete',
+                            style: 'destructive',
+                            onPress: () => handleDeleteField(cond.id, cond.field_name),
+                          },
+                        ]
+                      );
+                    }}
+                    overshootRight={false}
+                    friction={2}
+                  >
                     <TouchableOpacity
                       style={styles.dropdownItem}
                       onPress={() => {
@@ -532,13 +582,7 @@ export function EditItemModal({ item, visible, onClose, onSave }: EditItemModalP
                     >
                       <Text style={styles.dropdownItemText}>{cond.field_name}</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => handleDeleteField(cond.id, cond.field_name, 'condition')}
-                    >
-                      <Trash2 size={16} color="#e53e3e" />
-                    </TouchableOpacity>
-                  </View>
+                  </Swipeable>
                 ))}
               </ScrollView>
               <View style={styles.addNewSection}>
@@ -741,25 +785,35 @@ const styles = StyleSheet.create({
   dropdownScroll: {
     maxHeight: 150,
   },
-  dropdownItemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f7fafc',
-  },
   dropdownItem: {
-    flex: 1,
     paddingHorizontal: 12,
     paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f7fafc',
   },
   dropdownItemText: {
     fontSize: 14,
     color: '#2d3748',
   },
-  deleteButton: {
-    padding: 12,
+  swipeDeleteContainer: {
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
+  swipeDeleteButton: {
+    backgroundColor: '#e53e3e',
     justifyContent: 'center',
     alignItems: 'center',
+    width: 80,
+    height: '100%',
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 12,
+  },
+  swipeDeleteText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   addNewSection: {
     flexDirection: 'row',
