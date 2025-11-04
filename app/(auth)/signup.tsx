@@ -52,37 +52,58 @@ export default function SignupScreen() {
           <Text style={styles.subtitle}>Join MyGlassCase today</Text>
 
           <View style={styles.form}>
+            <Text style={styles.label}>Full name</Text>
             <TextInput
               style={styles.input}
               placeholder="Full Name"
+              placeholderTextColor="#94a3b8"
               value={fullName}
               onChangeText={setFullName}
               editable={!loading}
+              accessibilityLabel="Full name"
+              autoComplete="name"
+              textContentType="name"
             />
+
+            <Text style={styles.label}>Email address</Text>
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder="you@example.com"
+              placeholderTextColor="#94a3b8"
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
               editable={!loading}
+              accessibilityLabel="Email address"
+              autoComplete="email"
+              textContentType="emailAddress"
             />
+
+            <Text style={styles.label}>Password</Text>
             <TextInput
               style={styles.input}
-              placeholder="Password"
+              placeholder="At least 6 characters"
+              placeholderTextColor="#94a3b8"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
               editable={!loading}
+              accessibilityLabel="Password"
+              textContentType="password"
             />
+
+            <Text style={styles.label}>Confirm password</Text>
             <TextInput
               style={styles.input}
-              placeholder="Confirm Password"
+              placeholder="Re-enter your password"
+              placeholderTextColor="#94a3b8"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
               editable={!loading}
+              accessibilityLabel="Confirm password"
+              textContentType="password"
             />
 
             <TouchableOpacity
@@ -96,7 +117,7 @@ export default function SignupScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => router.push('/(auth)/login')}
               disabled={loading}
             >
               <Text style={styles.linkText}>
@@ -170,5 +191,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginTop: 8,
+  },
+  label: {
+    fontSize: 14,
+    color: '#4a5568',
+    marginBottom: 6,
+    marginLeft: 4,
+    fontWeight: '600',
   },
 });
