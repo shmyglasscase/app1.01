@@ -100,11 +100,7 @@ export function ConversationDetailScreen({ conversation, onBack }: ConversationD
     conversationChannel.subscribe('message-deleted', (message: Types.Message) => {
       const deleteEvent = message.data as MessageDeleteEvent;
       setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === deleteEvent.messageId
-            ? { ...msg, is_deleted: true, deleted_at: deleteEvent.deletedAt }
-            : msg
-        )
+        prev.filter((msg) => msg.id !== deleteEvent.messageId)
       );
     });
 
@@ -144,6 +140,7 @@ export function ConversationDetailScreen({ conversation, onBack }: ConversationD
         sender:sender_id(id, full_name, email)
       `)
       .eq('conversation_id', conversation.id)
+      .eq('is_deleted', false)
       .order('created_at', { ascending: false });
 
     if (data) {
@@ -324,11 +321,10 @@ export function ConversationDetailScreen({ conversation, onBack }: ConversationD
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isOwnMessage = item.sender_id === user?.id;
-    const isDeleted = item.is_deleted;
 
     return (
       <TouchableOpacity
-        onLongPress={() => isOwnMessage && !isDeleted && setSelectedMessageId(item.id)}
+        onLongPress={() => isOwnMessage && setSelectedMessageId(item.id)}
         activeOpacity={0.9}
       >
         <View
@@ -339,10 +335,9 @@ export function ConversationDetailScreen({ conversation, onBack }: ConversationD
         >
           <Text style={[
             styles.messageText,
-            isOwnMessage ? styles.ownMessageText : styles.otherMessageText,
-            isDeleted && styles.deletedText
+            isOwnMessage ? styles.ownMessageText : styles.otherMessageText
           ]}>
-            {isDeleted ? 'This message was deleted' : item.message_text}
+            {item.message_text}
           </Text>
           <View style={styles.messageFooter}>
             <Text style={[
@@ -350,9 +345,9 @@ export function ConversationDetailScreen({ conversation, onBack }: ConversationD
               isOwnMessage ? styles.ownMessageTime : styles.otherMessageTime
             ]}>
               {formatTime(item.created_at)}
-              {item.edited_at && !isDeleted && ' (edited)'}
+              {item.edited_at && ' (edited)'}
             </Text>
-            {isOwnMessage && !isDeleted && (
+            {isOwnMessage && (
               <Text style={styles.readReceipt}>
                 {item.is_read ? 'Read' : 'Sent'}
               </Text>
