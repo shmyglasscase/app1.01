@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
-import { User, Bell, Palette, HelpCircle, Shield, LogOut, ChevronRight, FileText } from 'lucide-react-native';
+import { User, Bell, HelpCircle, Shield, LogOut, ChevronRight, FileText } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { ProfileSettingsModal } from '@/components/ProfileSettingsModal';
 import { NotificationSettingsModal } from '@/components/NotificationSettingsModal';
-import { ThemeSettingsModal } from '@/components/ThemeSettingsModal';
 import { HelpCenterModal } from '@/components/HelpCenterModal';
 import { LegalDocumentModal } from '@/components/LegalDocumentModal';
 import { TERMS_AND_CONDITIONS } from '@/constants/terms';
@@ -16,7 +15,6 @@ export default function SettingsScreen() {
   const router = useRouter();
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [notificationsModalVisible, setNotificationsModalVisible] = useState(false);
-  const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
   const [termsModalVisible, setTermsModalVisible] = useState(false);
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
@@ -98,17 +96,6 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preferences</Text>
-        <View style={styles.settingsList}>
-          <SettingItem
-            icon={<Palette size={20} color="#38a169" />}
-            title="Theme"
-            subtitle="Light mode"
-            onPress={() => setThemeModalVisible(true)}
-          />
-        </View>
-      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Support & Legal</Text>
@@ -152,10 +139,6 @@ export default function SettingsScreen() {
       <NotificationSettingsModal
         visible={notificationsModalVisible}
         onClose={() => setNotificationsModalVisible(false)}
-      />
-      <ThemeSettingsModal
-        visible={themeModalVisible}
-        onClose={() => setThemeModalVisible(false)}
       />
       <HelpCenterModal
         visible={helpModalVisible}

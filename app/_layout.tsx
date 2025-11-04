@@ -1,12 +1,18 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Platform } from 'react-native';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { setupNotificationListeners, removeNotificationListeners } from '@/lib/notifications';
+import type { Subscription } from 'expo-notifications';
 
 export default function RootLayout() {
   useFrameworkReady();
+  const notificationListenersRef = useRef<{
+    notificationListener: Subscription;
+    responseListener: Subscription;
+  } | null>(null);
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -21,6 +27,18 @@ export default function RootLayout() {
         originalWarn(...args);
       };
     }
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      notificationListenersRef.current = setupNotificationListeners();
+    }
+
+    return () => {
+      if (notificationListenersRef.current) {
+        removeNotificationListeners(notificationListenersRef.current);
+      }
+    };
   }, []);
 
   return (
