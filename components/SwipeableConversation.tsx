@@ -91,22 +91,33 @@ export function SwipeableConversation({
     );
   };
 
-  const handleSwipeOpen = (direction: 'left' | 'right') => {
-    if (direction === 'right') {
-      handleDeletePress();
-    }
-  };
+  // Removed auto-confirm on swipe open — confirmation will only appear
+  // when the user taps the red delete button.
 
   const deleteConversation = async () => {
-    const { error } = await supabase
-      .from('conversations')
-      .delete()
-      .eq('id', conversation.id);
+    try {
+      const result = await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', conversation.id);
 
-    if (error) {
-      Alert.alert('Error', 'Failed to delete conversation. Please try again.');
-    } else {
+      console.log('[debug] deleteConversation result', result);
+
+      if (result.error) {
+        console.error('[debug] deleteConversation error', result.error);
+        Alert.alert('Error', `Failed to delete conversation: ${result.error.message || 'Unknown error'}`);
+        // close swipe so user isn't stuck
+        swipeableRef.current?.close();
+        return;
+      }
+
+      // Close the swipeable row and notify parent to refresh/remove the item
+      swipeableRef.current?.close();
       onDelete();
+    } catch (err) {
+      console.error('[debug] deleteConversation exception', err);
+      Alert.alert('Error', 'Failed to delete conversation. Please try again.');
+      swipeableRef.current?.close();
     }
   };
 
@@ -131,7 +142,6 @@ export function SwipeableConversation({
     <Swipeable
       ref={swipeableRef}
       renderRightActions={renderRightActions}
-      onSwipeableOpen={handleSwipeOpen}
       overshootRight={false}
       friction={2}
     >
