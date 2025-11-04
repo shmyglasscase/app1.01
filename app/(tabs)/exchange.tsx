@@ -206,8 +206,12 @@ export default function ExchangeScreen() {
   };
 
   const handleSelectFromCollection = async () => {
-    await loadCollectionItems();
-    setShowCollectionPicker(true);
+  console.log('[debug] handleSelectFromCollection called');
+  // Close the Add Listing modal so the Collection Picker modal can appear on top
+  console.log('[debug] closing add modal and opening collection picker');
+  setShowAddModal(false);
+  await loadCollectionItems();
+  setShowCollectionPicker(true);
   };
 
   const handleSelectCollectionItem = (item: InventoryItem) => {
@@ -221,7 +225,10 @@ export default function ExchangeScreen() {
       photo_url: item.photo_url || '',
       inventory_item_id: item.id,
     });
-    setShowCollectionPicker(false);
+  console.log('[debug] handleSelectCollectionItem - selected', item.id);
+  // Close collection picker and reopen the Add Listing modal so the user can continue
+  setShowCollectionPicker(false);
+  setShowAddModal(true);
   };
 
   const handleAddListing = async () => {
@@ -379,15 +386,24 @@ export default function ExchangeScreen() {
   };
 
   const handleDeleteListing = async (itemId: string) => {
-    const { error } = await supabase
-      .from('marketplace_listings')
-      .update({ listing_status: 'deleted' })
-      .eq('id', itemId);
+    console.log('[debug] handleDeleteListing called for', itemId);
+    try {
+      const result = await supabase
+        .from('marketplace_listings')
+    .update({ listing_status: 'removed' })
+        .eq('id', itemId);
 
-    if (!error) {
-      loadMarketplaceItems();
-      setShowDetailsModal(false);
-    } else {
+      console.log('[debug] delete result', result);
+
+      if (!result.error) {
+        loadMarketplaceItems();
+        setShowDetailsModal(false);
+      } else {
+        console.error('[debug] delete error', result.error);
+        Alert.alert('Error', 'Failed to delete listing');
+      }
+    } catch (err) {
+      console.error('[debug] delete exception', err);
       Alert.alert('Error', 'Failed to delete listing');
     }
   };
@@ -814,18 +830,25 @@ export default function ExchangeScreen() {
           <ScrollView style={styles.modalContent}>
             <View style={styles.sourceSection}>
               <Text style={styles.sourceSectionTitle}>List an item</Text>
-              <TouchableOpacity
-                style={styles.collectionButton}
-                onPress={handleSelectFromCollection}
-              >
-                <Package size={20} color="#38a169" />
-                <Text style={styles.collectionButtonText}>Select from Collection</Text>
-                <ChevronRight size={20} color="#38a169" />
-              </TouchableOpacity>
+              {!editingItem && (
+                <TouchableOpacity
+                  style={styles.collectionButton}
+                  onPress={handleSelectFromCollection}
+                >
+                  <Package size={20} color="#38a169" />
+                  <Text style={styles.collectionButtonText}>Select from Collection</Text>
+                  <ChevronRight size={20} color="#38a169" />
+                </TouchableOpacity>
+              )}
               {formData.inventory_item_id && (
                 <View style={styles.linkedBadge}>
                   <Text style={styles.linkedBadgeText}>Linked to collection item</Text>
                 </View>
+              )}
+              {editingItem && (
+                <Text style={{ marginTop: 8, color: '#718096', fontSize: 12 }}>
+                  Editing existing listing — cannot link a different collection item
+                </Text>
               )}
             </View>
 
