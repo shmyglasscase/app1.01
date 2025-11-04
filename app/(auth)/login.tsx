@@ -65,21 +65,12 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
 
-          <View style={styles.forgotLinksContainer}>
-            <TouchableOpacity
-              onPress={() => router.push('/(auth)/forgot-password')}
-              disabled={loading}
-            >
-              <Text style={styles.forgotLinkText}>Forgot Password?</Text>
-            </TouchableOpacity>
-            <Text style={styles.forgotSeparator}>•</Text>
-            <TouchableOpacity
-              onPress={() => router.push('/(auth)/forgot-email')}
-              disabled={loading}
-            >
-              <Text style={styles.forgotLinkText}>Forgot Email?</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={() => router.push('/(auth)/forgot-password')}
+            disabled={loading}
+          >
+            <Text style={styles.forgotLinkText}>Forgot Password?</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => router.push('/(auth)/signup')}
@@ -152,19 +143,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
-  forgotLinksContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
-  },
   forgotLinkText: {
     color: '#38a169',
     fontSize: 14,
-  },
-  forgotSeparator: {
-    color: '#718096',
-    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 4,
   },
 });
