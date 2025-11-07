@@ -62,6 +62,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         full_name: fullName,
       });
       if (profileError) throw profileError;
+
+      const { error: trialError } = await supabase.rpc('start_user_trial', {
+        trial_user_id: data.user.id,
+      });
+      if (trialError) {
+        console.error('Failed to start trial:', trialError);
+      }
     }
   };
 

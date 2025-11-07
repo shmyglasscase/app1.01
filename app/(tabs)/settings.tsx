@@ -1,20 +1,24 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
-import { User, Bell, HelpCircle, Shield, LogOut, ChevronRight, FileText } from 'lucide-react-native';
+import { User, Bell, HelpCircle, Shield, LogOut, ChevronRight, FileText, Crown } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { ProfileSettingsModal } from '@/components/ProfileSettingsModal';
 import { NotificationSettingsModal } from '@/components/NotificationSettingsModal';
 import { HelpCenterModal } from '@/components/HelpCenterModal';
 import { LegalDocumentModal } from '@/components/LegalDocumentModal';
+import { SubscriptionManagementModal } from '@/components/SubscriptionManagementModal';
 import { TERMS_AND_CONDITIONS } from '@/constants/terms';
 import { PRIVACY_POLICY } from '@/constants/privacy';
+import { useSubscription } from '@/hooks/useSubscription';
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const { subscriptionInfo, isTrialActive, isSubscribed } = useSubscription();
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [notificationsModalVisible, setNotificationsModalVisible] = useState(false);
+  const [subscriptionModalVisible, setSubscriptionModalVisible] = useState(false);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
   const [termsModalVisible, setTermsModalVisible] = useState(false);
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
@@ -88,6 +92,18 @@ export default function SettingsScreen() {
             onPress={() => setProfileModalVisible(true)}
           />
           <SettingItem
+            icon={<Crown size={20} color="#38a169" />}
+            title="Subscription"
+            subtitle={
+              isSubscribed
+                ? 'Premium Active'
+                : isTrialActive
+                ? 'Free Trial Active'
+                : 'Manage subscription'
+            }
+            onPress={() => setSubscriptionModalVisible(true)}
+          />
+          <SettingItem
             icon={<Bell size={20} color="#38a169" />}
             title="Notifications"
             subtitle="Manage notification preferences"
@@ -135,6 +151,10 @@ export default function SettingsScreen() {
       <ProfileSettingsModal
         visible={profileModalVisible}
         onClose={() => setProfileModalVisible(false)}
+      />
+      <SubscriptionManagementModal
+        visible={subscriptionModalVisible}
+        onClose={() => setSubscriptionModalVisible(false)}
       />
       <NotificationSettingsModal
         visible={notificationsModalVisible}

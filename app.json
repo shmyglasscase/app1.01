@@ -65,7 +65,8 @@
           "color": "#38a169",
           "sounds": []
         }
-      ]
+      ],
+      "expo-in-app-purchases"
     ],
     "experiments": {
       "typedRoutes": true
