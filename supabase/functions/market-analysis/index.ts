@@ -146,26 +146,23 @@ async function searchEbayListings(inventoryItem: InventoryItem): Promise<ScoredL
 
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-    const formattedDate = ninetyDaysAgo.toISOString().split('.')[0] + 'Z';
+    const formattedDate = ninetyDaysAgo.toISOString();
 
-    const params = new URLSearchParams({
+    const queryParams: Record<string, string> = {
       'OPERATION-NAME': 'findCompletedItems',
       'SERVICE-VERSION': '1.0.0',
       'SECURITY-APPNAME': ebayAppId,
       'RESPONSE-DATA-FORMAT': 'JSON',
       'keywords': searchTerms,
-      'paginationInput.entriesPerPage': '50',
+      'paginationInput.entriesPerPage': '25',
       'sortOrder': 'EndTimeSoonest',
-    });
-
-    params.append('itemFilter(0).name', 'SoldItemsOnly');
-    params.append('itemFilter(0).value', 'true');
-
-    params.append('itemFilter(1).name', 'EndTimeFrom');
-    params.append('itemFilter(1).value', formattedDate);
+      'itemFilter(0).name': 'SoldItemsOnly',
+      'itemFilter(0).value': 'true',
+      'itemFilter(1).name': 'EndTimeFrom',
+      'itemFilter(1).value': formattedDate,
+    };
 
     if (inventoryItem.condition) {
-      params.append('itemFilter(2).name', 'Condition');
       const conditionMap: Record<string, string> = {
         'new': '1000',
         'like new': '1500',
@@ -177,13 +174,19 @@ async function searchEbayListings(inventoryItem: InventoryItem): Promise<ScoredL
       };
       const conditionValue = conditionMap[inventoryItem.condition.toLowerCase()];
       if (conditionValue) {
-        params.append('itemFilter(2).value', conditionValue);
+        queryParams['itemFilter(2).name'] = 'Condition';
+        queryParams['itemFilter(2).value'] = conditionValue;
       }
     }
 
-    const url = `${baseUrl}?${params.toString()}`;
+    const queryString = Object.entries(queryParams)
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+      .join('&');
+
+    const url = `${baseUrl}?${queryString}`;
 
     console.log(`Searching eBay for: "${searchTerms}"`);
+    console.log(`eBay URL: ${url.replace(ebayAppId, 'REDACTED')}`);
 
     const response = await fetch(url, {
       headers: {
@@ -191,13 +194,24 @@ async function searchEbayListings(inventoryItem: InventoryItem): Promise<ScoredL
       },
     });
 
+    const responseText = await response.text();
+    console.log(`eBay API status: ${response.status}`);
+    console.log(`eBay API response preview: ${responseText.substring(0, 500)}`);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`eBay API error ${response.status}:`, errorText);
+      console.error(`eBay API error ${response.status}: Full response:`, responseText);
       throw new Error(`eBay API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse eBay response:', parseError);
+      console.error('Response text:', responseText);
+      throw new Error('Invalid JSON response from eBay API');
+    }
+
     const searchResult = data.findCompletedItemsResponse?.[0];
 
     if (!searchResult?.searchResult?.[0]?.item) {
