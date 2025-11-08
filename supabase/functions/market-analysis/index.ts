@@ -202,19 +202,16 @@ async function searchEbayListings(inventoryItem: InventoryItem): Promise<ScoredL
       console.error(`eBay API error ${response.status}: Full response:`, responseText);
 
       if (response.status === 500) {
-        let errorData;
         try {
-          errorData = JSON.parse(responseText);
+          const errorData = JSON.parse(responseText);
           const errorMessage = errorData?.errorMessage?.[0]?.error?.[0]?.message?.[0];
           const errorId = errorData?.errorMessage?.[0]?.error?.[0]?.errorId?.[0];
-
-          if (errorId === '10001' || errorMessage?.includes('rate limit')) {
-            console.warn('eBay API rate limit hit, returning empty results');
-            return [];
-          }
+          console.warn(`eBay error ${errorId}: ${errorMessage}`);
         } catch (e) {
           console.error('Could not parse eBay error response');
         }
+        console.warn('eBay API error 500 (likely rate limit), returning empty results');
+        return [];
       }
 
       throw new Error(`eBay API error: ${response.status}`);
