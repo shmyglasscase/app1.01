@@ -200,6 +200,23 @@ async function searchEbayListings(inventoryItem: InventoryItem): Promise<ScoredL
 
     if (!response.ok) {
       console.error(`eBay API error ${response.status}: Full response:`, responseText);
+
+      if (response.status === 500) {
+        let errorData;
+        try {
+          errorData = JSON.parse(responseText);
+          const errorMessage = errorData?.errorMessage?.[0]?.error?.[0]?.message?.[0];
+          const errorId = errorData?.errorMessage?.[0]?.error?.[0]?.errorId?.[0];
+
+          if (errorId === '10001' || errorMessage?.includes('rate limit')) {
+            console.warn('eBay API rate limit hit, returning empty results');
+            return [];
+          }
+        } catch (e) {
+          console.error('Could not parse eBay error response');
+        }
+      }
+
       throw new Error(`eBay API error: ${response.status}`);
     }
 
@@ -334,15 +351,16 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (!forceRefresh) {
-      const { data: cachedAnalysis } = await supabase
-        .from('market_analysis_cache')
-        .select('*')
-        .eq('inventory_item_id', inventoryItemId)
-        .gt('expires_at', new Date().toISOString())
-        .maybeSingle();
+    const { data: cachedAnalysis } = await supabase
+      .from('market_analysis_cache')
+      .select('*')
+      .eq('inventory_item_id', inventoryItemId)
+      .maybeSingle();
 
-      if (cachedAnalysis) {
+    if (cachedAnalysis && !forceRefresh) {
+      const isExpired = new Date(cachedAnalysis.expires_at) < new Date();
+
+      if (!isExpired) {
         const result = {
           ...cachedAnalysis.analysis_data,
           cached: true,
@@ -364,6 +382,25 @@ Deno.serve(async (req: Request) => {
     const scoredListings = await searchEbayListings(inventoryItem);
 
     if (scoredListings.length === 0) {
+      if (cachedAnalysis) {
+        console.log('Using stale cache due to eBay API unavailability');
+        const result = {
+          ...cachedAnalysis.analysis_data,
+          cached: true,
+          stale: true,
+          last_updated: cachedAnalysis.last_updated,
+          message: 'Using cached data (eBay API temporarily unavailable)',
+        };
+
+        return new Response(
+          JSON.stringify(result),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
       const emptyResult = {
         average_price: 0,
         min_price: 0,
@@ -373,6 +410,7 @@ Deno.serve(async (req: Request) => {
         listings: [],
         cached: false,
         last_updated: new Date().toISOString(),
+        message: 'No market data available at this time',
       };
 
       return new Response(
