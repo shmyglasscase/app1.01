@@ -63,12 +63,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (profileError) throw profileError;
 
-      const { error: trialError } = await supabase.rpc('start_user_trial', {
-        trial_user_id: data.user.id,
-      });
-      if (trialError) {
-        console.error('Failed to start trial:', trialError);
-      }
+      // Subscription trial temporarily disabled
+      // const { error: trialError } = await supabase.rpc('start_user_trial', {
+      //   trial_user_id: data.user.id,
+      // });
+      // if (trialError) {
+      //   console.error('Failed to start trial:', trialError);
+      // }
     }
   };
 
