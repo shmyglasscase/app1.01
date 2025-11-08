@@ -135,15 +135,24 @@ async function searchEbayListings(inventoryItem: InventoryItem): Promise<ScoredL
       inventoryItem.name,
       inventoryItem.manufacturer,
       inventoryItem.pattern,
-    ].filter(Boolean).join(' ');
+    ].filter(Boolean).join(' ').trim();
+
+    if (!searchTerms) {
+      console.warn('No valid search terms provided for inventory item');
+      return [];
+    }
 
     const baseUrl = 'https://svcs.ebay.com/services/search/FindingService/v1';
+
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const formattedDate = ninetyDaysAgo.toISOString().split('.')[0] + 'Z';
+
     const params = new URLSearchParams({
       'OPERATION-NAME': 'findCompletedItems',
       'SERVICE-VERSION': '1.0.0',
       'SECURITY-APPNAME': ebayAppId,
       'RESPONSE-DATA-FORMAT': 'JSON',
-      'REST-PAYLOAD': '',
       'keywords': searchTerms,
       'paginationInput.entriesPerPage': '50',
       'sortOrder': 'EndTimeSoonest',
@@ -153,9 +162,7 @@ async function searchEbayListings(inventoryItem: InventoryItem): Promise<ScoredL
     params.append('itemFilter(0).value', 'true');
 
     params.append('itemFilter(1).name', 'EndTimeFrom');
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-    params.append('itemFilter(1).value', ninetyDaysAgo.toISOString());
+    params.append('itemFilter(1).value', formattedDate);
 
     if (inventoryItem.condition) {
       params.append('itemFilter(2).name', 'Condition');
@@ -176,6 +183,8 @@ async function searchEbayListings(inventoryItem: InventoryItem): Promise<ScoredL
 
     const url = `${baseUrl}?${params.toString()}`;
 
+    console.log(`Searching eBay for: "${searchTerms}"`);
+
     const response = await fetch(url, {
       headers: {
         'Accept': 'application/json',
@@ -183,6 +192,8 @@ async function searchEbayListings(inventoryItem: InventoryItem): Promise<ScoredL
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`eBay API error ${response.status}:`, errorText);
       throw new Error(`eBay API error: ${response.status}`);
     }
 
