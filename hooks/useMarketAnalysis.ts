@@ -40,7 +40,7 @@ export function useMarketAnalysis({
         }
 
         const response = await fetch(
-          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-market-analysis`,
+          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/market-analysis`,
           {
             method: 'POST',
             headers: {
