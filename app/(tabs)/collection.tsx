@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, RefreshControl, Share, Alert, Platform } from 'react-native';
-import { Search, Filter, Star, X, SlidersHorizontal, Calendar, MapPin, Package, Plus, Check, Share2, Trash2 } from 'lucide-react-native';
+import { Search, Filter, Star, X, SlidersHorizontal, Calendar, MapPin, Package, Plus, Check, Share2, Trash2, Download } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -388,6 +388,112 @@ export default function CollectionScreen() {
     setSelectionMode(false);
   };
 
+  const handleDownloadCSV = async () => {
+    const itemsToExport = selectionMode && selectedItems.size > 0
+      ? filteredItems.filter(item => selectedItems.has(item.id))
+      : filteredItems;
+
+    if (itemsToExport.length === 0) {
+      Alert.alert('No Items', 'There are no items to export');
+      return;
+    }
+
+    try {
+      const csvContent = generateCSV(itemsToExport);
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `collection_export_${timestamp}.csv`;
+
+      if (Platform.OS === 'web') {
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        Alert.alert(
+          'Export Successful',
+          `${itemsToExport.length} ${itemsToExport.length === 1 ? 'item' : 'items'} exported successfully`
+        );
+      } else {
+        const FileSystem = require('expo-file-system');
+        const Sharing = require('expo-sharing');
+
+        const fileUri = FileSystem.documentDirectory + filename;
+        await FileSystem.writeAsStringAsync(fileUri, csvContent, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: 'text/csv',
+            dialogTitle: 'Export Collection',
+            UTI: 'public.comma-separated-values-text',
+          });
+        } else {
+          Alert.alert('Export Complete', 'CSV file saved successfully');
+        }
+      }
+
+      if (selectionMode) {
+        setSelectedItems(new Set());
+        setSelectionMode(false);
+      }
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      Alert.alert('Export Failed', 'Failed to export items. Please try again.');
+    }
+  };
+
+  const generateCSV = (items: InventoryItem[]): string => {
+    const headers = [
+      'Item Name',
+      'Category',
+      'Subcategory',
+      'Manufacturer',
+      'Pattern',
+      'Year Manufactured',
+      'Purchase Price',
+      'Purchase Date',
+      'Current Value',
+      'Condition',
+      'Quantity',
+      'Location',
+      'Description'
+    ];
+
+    const escapeCSVField = (field: any): string => {
+      if (field === null || field === undefined) return '';
+      const str = String(field);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const rows = items.map(item => [
+      escapeCSVField(item.name),
+      escapeCSVField(item.category),
+      escapeCSVField(item.subcategory || ''),
+      escapeCSVField(item.manufacturer || ''),
+      escapeCSVField(item.pattern || ''),
+      escapeCSVField(item.year_manufactured || ''),
+      escapeCSVField(item.purchase_price ? item.purchase_price.toFixed(2) : ''),
+      escapeCSVField(item.purchase_date ? formatDate(item.purchase_date) : ''),
+      escapeCSVField(item.current_value ? item.current_value.toFixed(2) : ''),
+      escapeCSVField(item.condition || ''),
+      escapeCSVField(item.quantity || ''),
+      escapeCSVField(item.location || ''),
+      escapeCSVField(item.description || '')
+    ]);
+
+    const csvLines = [headers.join(','), ...rows.map(row => row.join(','))];
+    return csvLines.join('\n');
+  };
+
   const clearAllFilters = () => {
     setSelectedCategory('All');
     setSelectedSubcategory('All');
@@ -517,6 +623,9 @@ export default function CollectionScreen() {
             {selectedItems.size} selected
           </Text>
           <View style={styles.selectionActions}>
+            <TouchableOpacity onPress={handleDownloadCSV} style={styles.selectionActionButton}>
+              <Download size={20} color="#3182ce" />
+            </TouchableOpacity>
             <TouchableOpacity onPress={handleShareSelected} style={styles.selectionActionButton}>
               <Share2 size={20} color="#38a169" />
             </TouchableOpacity>
@@ -552,6 +661,13 @@ export default function CollectionScreen() {
             onPress={() => setShowAdvancedSearch(true)}
           >
             <SlidersHorizontal size={20} color="#38a169" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={handleDownloadCSV}
+            disabled={filteredItems.length === 0}
+          >
+            <Download size={20} color={filteredItems.length === 0 ? "#cbd5e0" : "#38a169"} />
           </TouchableOpacity>
         </View>
       )}
