@@ -1,6 +1,6 @@
 export const PRIVACY_POLICY = `PRIVACY POLICY
 
-Version: 1.0.0 | Last Updated: January 27, 2025
+Version: 1.0.0 | Last Updated: January 27, 2026
 
 Your Privacy Matters
 
